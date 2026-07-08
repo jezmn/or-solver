@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IP - OR Solver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>document.documentElement.classList.add('dark');</script>
+  <link href="/css/tailwind.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+  <script src="js/api.js"></script>
+  <script src="js/cache.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/table-input.js"></script>
+  <script src="js/problem-io.js"></script>
+  <style>[x-cloak] { display: none !important; }
+* { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+*::-webkit-scrollbar { width: 5px; height: 5px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+*::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.dark * { scrollbar-color: #475569 transparent; }
+.dark *::-webkit-scrollbar-thumb { background: #475569; }
+.dark *::-webkit-scrollbar-thumb:hover { background: #64748b; }</style>
+</head>
+<body class="bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 min-h-screen font-['JetBrains_Mono','monospace']" x-cloak x-data="ipPage()">
+  <nav class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md text-zinc-900 dark:text-zinc-100 shadow-lg border-b border-zinc-200 dark:border-zinc-700/50">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/" class="text-xl font-bold tracking-tight" x-text="$store.i18n.t('site.title')">OR Solver</a>
+      <div class="flex items-center gap-3">
+        <span class="flex items-center gap-1 text-xs font-medium">
+          <a href="#" @click.prevent="$store.i18n.toggle()" x-text="$store.i18n.lang === 'en' ? '[en]' : 'en'" class="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors" :class="$store.i18n.lang === 'en' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'"></a>
+          <span class="text-zinc-300 dark:text-zinc-600">/</span>
+          <a href="#" @click.prevent="$store.i18n.toggle()" x-text="$store.i18n.lang === 'es' ? '[es]' : 'es'" class="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors" :class="$store.i18n.lang === 'es' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'"></a>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.store('dark', document.documentElement.classList.contains('dark'));
+    });
+  </script>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <div class="flex items-center gap-2 mb-6">
+      <a href="/" class="text-sm text-zinc-600 dark:text-zinc-400 hover:underline" x-text="$store.i18n.t('back')">← Back</a>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-zinc-50" x-text="$store.i18n.t('ip.page.title')">Integer Programming (Branch & Bound)</h1>
+    </div>
+
+    <div x-show="error" x-text="error" class="bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm mb-4"></div>
+
+    <div class="max-w-5xl mx-auto space-y-6">
+      <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 class="text-lg font-bold" x-text="$store.i18n.t('problem.input')">Problem Input</h2>
+          <div data-problem-io-controls class="flex items-center gap-2">
+            <button type="button" @click="exportProblem()" class="text-xs bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 px-3 py-1.5 rounded hover:bg-zinc-300 dark:hover:bg-zinc-600 transition" x-text="$store.i18n.t('export')">Export</button>
+<label class="text-xs bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 px-3 py-1.5 rounded hover:bg-zinc-300 dark:hover:bg-zinc-600 transition cursor-pointer">
+              <span x-text="$store.i18n.t('import')">Import</span>
+              <input type="file" accept="application/json,.json" @change="importProblem($event)" class="sr-only dark:text-zinc-100 dark:placeholder-zinc-500">
+            </label>
+          </div>
+        </div>
+        <div class="space-y-4" @input="onInputChange()">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1" x-text="$store.i18n.t('optimization')">Optimization</label>
+            <div x-data="{ open: false }" class="relative">
+              <button type="button" @click="open = !open" @keydown.escape="open = false"
+                class="w-full flex items-center justify-between gap-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/60 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-100 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors">
+                <span x-text="optimization === 'max' ? $store.i18n.t('maximize') : $store.i18n.t('minimize')"></span>
+                <svg :class="{ 'rotate-180': open }" class="w-4 h-4 transition-transform text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </button>
+              <div x-show="open" @click.away="open = false"
+                class="absolute z-50 mt-1 w-full rounded-lg border border-zinc-200 dark:border-zinc-700/50 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
+                  <button @click="optimization = 'max'; open = false"
+                    class="w-full text-left px-3 py-2 text-sm transition-colors"
+                    :class="optimization === 'max' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'"
+                    x-text="$store.i18n.t('maximize')">
+                    Maximize
+                  </button>
+                  <button @click="optimization = 'min'; open = false"
+                    class="w-full text-left px-3 py-2 text-sm transition-colors"
+                    :class="optimization === 'min' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'"
+                    x-text="$store.i18n.t('minimize')">
+                    Minimize
+                  </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300" x-text="$store.i18n.t('variable')">Variables</label>
+              <div class="flex gap-1">
+                <button @click="table.addCol(); syncIntVars()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-text="$store.i18n.t('add.variable')">+ Variable</button>
+                <button @click="table.removeCol(); syncIntVars()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-show="table.numCols > 1" x-text="$store.i18n.t('remove.variable')">− Variable</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-700">
+            <table class="w-full text-xs border-collapse bg-white dark:bg-zinc-800">
+              <thead>
+                <tr class="bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200">
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24" x-text="$store.i18n.t('name')">Name</th>
+                  <template x-for="(_, i) in Array(table.cols).fill()" :key="i">
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20 min-w-[80px]">
+                      <input type="text" x-model="table.varNames[i]" class="w-full px-1 py-1 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded" placeholder="x">
+                    </th>
+                  </template>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-16" x-text="$store.i18n.t('sign')">Sign</th>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('rhs')">RHS</th>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-48" x-text="$store.i18n.t('equation')">Equation</th>
+                </tr>
+                <tr class="text-[10px] text-zinc-400 dark:text-zinc-500 italic border-0">
+                  <td colspan="100" class="px-2 py-1 text-center border-0" x-text="$store.i18n.t('int.mixed.mode.hint')">Uncheck to treat variable as continuous (mixed-integer mode)</td>
+                </tr>
+                <tr class="bg-amber-50 dark:bg-amber-950/30 text-slate-600 dark:text-zinc-400">
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1 text-center text-[10px] font-medium" x-text="$store.i18n.t('int.column')">Int?</th>
+                  <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1 text-center">
+                      <input type="checkbox" x-model="intVars[j]" class="w-3.5 h-3.5 accent-indigo-600 dark:accent-indigo-400 cursor-pointer">
+                    </th>
+                  </template>
+                  <th class="border border-slate-300 dark:border-zinc-700"></th>
+                  <th class="border border-slate-300 dark:border-zinc-700"></th>
+                  <th class="border border-slate-300 dark:border-zinc-700"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="bg-indigo-50 dark:bg-indigo-950/40 text-slate-800 dark:text-zinc-100">
+                  <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center text-xs font-medium text-slate-500 dark:text-zinc-400 bg-indigo-50 dark:bg-indigo-950/40" x-text="optimization === 'max' ? $store.i18n.t('maximize') : $store.i18n.t('minimize')"></td>
+                  <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
+                    <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                      <input type="text" x-model="table.rows[0].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-indigo-100 dark:focus:bg-indigo-950/60 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                    </td>
+                  </template>
+                  <td class="border border-slate-300 dark:border-zinc-700 p-0 text-center text-slate-500 dark:text-zinc-400 text-xs bg-indigo-50 dark:bg-indigo-950/40" x-text="$store.i18n.t('objective.label')">obj</td>
+                  <td class="border border-slate-300 dark:border-zinc-700 p-0 text-center text-slate-500 dark:text-zinc-400 text-xs bg-indigo-50 dark:bg-indigo-950/40">—</td>
+                  <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center text-xs font-mono text-slate-500 dark:text-zinc-400 bg-indigo-50 dark:bg-indigo-950/40" x-text="formatObjectiveEquation(optimization, table.rows[0].cells, table.varNames)"></td>
+                </tr>
+                <template x-for="(row, i) in table.rows.slice(1)" :key="i">
+                  <tr>
+                    <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                      <input type="text" x-model="row.label" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 text-xs focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400" :placeholder="$store.i18n.t('constraint')">
+                    </td>
+                    <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
+                      <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                        <input type="text" x-model="table.rows[i + 1].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                      </td>
+                    </template>
+                    <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                      <select x-model="table.rows[i + 1].sign" class="w-full px-1 py-1.5 text-center bg-white/70 dark:bg-zinc-900/60 border-0 outline-none text-xs text-slate-800 dark:text-zinc-100 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500">
+                        <option value="<=">≤</option>
+                        <option value="=">=</option>
+                        <option value=">=">≥</option>
+                      </select>
+                    </td>
+                    <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                      <input type="text" x-model="table.rows[i + 1].rhs" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                    </td>
+                    <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center text-xs font-mono text-slate-500 dark:text-zinc-400" x-text="formatEquation(row)"></td>
+                  </tr>
+                </template>
+                <tr x-show="result && result.status === 'optimal'" class="bg-zinc-100 dark:bg-zinc-800/60 font-semibold">
+                  <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center text-xs font-bold text-zinc-700 dark:text-zinc-300" x-text="$store.i18n.t('solution.row')">Solution</td>
+                  <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
+                    <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-mono text-xs text-zinc-800 dark:text-zinc-200" x-text="formatNumber((result?.solution?.variables ?? {})['x' + (j + 1)])"></td>
+                  </template>
+                  <td class="border border-slate-300 dark:border-zinc-700"></td>
+                  <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-mono text-xs font-bold text-zinc-800 dark:text-zinc-200" x-text="formatNumber(result?.solution?.optimal_value)"></td>
+                  <td class="border border-slate-300 dark:border-zinc-700"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex gap-2">
+            <button @click="table.addRow()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-3 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-text="$store.i18n.t('add.constraint')">+ Constraint</button>
+            <button @click="table.removeRow()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-3 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-show="table.numRows > 1" x-text="$store.i18n.t('remove.constraint')">− Constraint</button>
+          </div>
+
+          <div class="flex gap-2">
+            <button @click="clearTable()" class="flex-1 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-semibold py-2 rounded-lg transition text-sm" x-text="$store.i18n.t('clear.table')">Clear table</button>
+            <button @click="solve()" class="flex-1 bg-zinc-800 dark:bg-zinc-200 hover:bg-zinc-700 dark:hover:bg-zinc-300 text-white dark:text-zinc-900 font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2" :disabled="loading">
+            <span x-show="loading">
+              <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            </span>
+            <span x-text="loading ? $store.i18n.t('solving') : $store.i18n.t('solve')"></span>
+          </button>
+          </div>
+        </div>
+      </div>
+
+      <div x-show="!result" class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6 flex flex-col items-center justify-center text-center min-h-[300px]">
+        <svg class="w-16 h-16 text-slate-300 dark:text-zinc-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        <h3 class="text-lg font-semibold text-slate-400 dark:text-zinc-500 mb-2" x-text="$store.i18n.t('waiting.title')">Waiting for Solution</h3>
+        <p class="text-sm text-slate-400 dark:text-zinc-500 max-w-xs" x-text="$store.i18n.t('waiting.full')">Configure your problem and click <span class="font-medium text-indigo-500 dark:text-indigo-400">Solve</span> to see results here.</p>
+      </div>
+      <div class="space-y-4" x-show="result">
+        <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-bold" x-text="$store.i18n.t('solution')">Solution</h2>
+            </div>
+          <div x-show="result?.status === 'optimal'" class="space-y-2 text-sm">
+            <p><span class="font-semibold" x-text="$store.i18n.t('status')">Status:</span> <span class="text-emerald-600 dark:text-emerald-400" x-text="$store.i18n.t('optimal')">Optimal Integer Solution</span></p>
+            <p><span class="font-semibold" x-text="$store.i18n.t('optimal.value')">Optimal Value:</span> <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400" x-text="formatNumber(result?.solution?.optimal_value)"></span></p>
+            <div class="mt-2">
+              <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('decision.variables')">Decision Variables</h4>
+              <template x-for="(v, name) in (result?.solution?.variables ?? {})" :key="name">
+                <div class="flex justify-between text-xs border-b border-slate-100 dark:border-zinc-700 py-1"><span class="font-mono" x-text="formatVariableName(name)"></span><span class="font-mono" x-text="formatNumber(v, 0)"></span></div>
+              </template>
+            </div>
+          </div>
+          <div x-show="result?.status && result.status !== 'optimal'" x-html="result?.status ? renderSolverStatusBlock(result.status, result) : ''"></div>
+        </div>
+
+        <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="result?.steps?.length">
+          <h2 class="text-lg font-bold mb-3" x-text="$store.i18n.t('steps')">Steps</h2>
+          <div id="steps-container" x-html="result?.steps?.length ? renderIntegerSteps(result.steps) : ''"></div>
+        </div>
+
+        <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="hasFeasibleGraph()">
+          <h2 class="text-lg font-bold mb-3" x-text="$store.i18n.t('graph')">Graph</h2>
+          <div class="h-80">
+            <canvas id="graph-canvas" class="w-full h-full"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="result?.graph?.type === 'tree'" id="tree-container">
+          <h2 class="text-lg font-bold mb-3" x-text="$store.i18n.t('bb.tree')">Branch & Bound Tree</h2>
+          <div class="overflow-x-auto">
+            <div id="plotly-tree" class="w-full" style="height: 450px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function ipPage() {
+      return {
+        optimization: 'max',
+        table: null,
+        loading: false,
+        result: null,
+        error: '',
+        intVars: [],
+        chartInstance: null,
+
+        getFeasibleGraphData() {
+          if (this.result && this.result.feasible_graph && this.result.feasible_graph.data) {
+            return this.result.feasible_graph.data;
+          }
+          return this.buildFeasibleGraphFromInput();
+        },
+
+        buildFeasibleGraphFromInput() {
+          if (!this.result || !this.table || this.table.cols !== 2) return null;
+          const vals = this.table.getAllValues();
+          const objective = vals[0]?.cells || [];
+          const constraints = [];
+          const signs = [];
+          const rhs = [];
+          for (let i = 1; i < vals.length; i++) {
+            const row = vals[i];
+            if (!row || row.cells.some(Number.isNaN) || Number.isNaN(row.rhs)) return null;
+            constraints.push(row.cells);
+            signs.push(row.sign || '<=');
+            rhs.push(row.rhs);
+          }
+          if (constraints.length === 0 || objective.length !== 2 || objective.some(Number.isNaN)) return null;
+
+          const lpStep = (this.result.steps || []).find(step => step.data && step.data.variables && step.data.value !== undefined && step.data.direction === undefined);
+          const lpVars = lpStep && lpStep.data ? lpStep.data.variables : null;
+          const intVars = this.result.solution && this.result.solution.variables ? this.result.solution.variables : null;
+          const xSeeds = [0];
+          const ySeeds = [0];
+          constraints.forEach((row, idx) => {
+            const a = row[0] || 0;
+            const b = row[1] || 0;
+            if (Math.abs(a) > 1e-9 && rhs[idx] / a >= 0) xSeeds.push(rhs[idx] / a);
+            if (Math.abs(b) > 1e-9 && rhs[idx] / b >= 0) ySeeds.push(rhs[idx] / b);
+          });
+          [lpVars, intVars].forEach(vars => {
+            if (vars) {
+              xSeeds.push(Number(vars.x1 || 0));
+              ySeeds.push(Number(vars.x2 || 0));
+            }
+          });
+          const xMax = Math.max(6, Math.max(...xSeeds) * 1.2 + 1);
+          const yMax = Math.max(6, Math.max(...ySeeds) * 1.2 + 1);
+          const samples = 100;
+          const xs = Array.from({ length: samples + 1 }, (_, i) => xMax * i / samples);
+          const boundary_lines = constraints.map((row, idx) => {
+            const a = row[0] || 0;
+            const b = row[1] || 0;
+            if (Math.abs(b) > 1e-9) {
+              return { label: `C${idx + 1}`, x: xs, y: xs.map(x => (rhs[idx] - a * x) / b) };
+            }
+            if (Math.abs(a) > 1e-9) {
+              const x = rhs[idx] / a;
+              return { label: `C${idx + 1}`, x: [x, x], y: [0, yMax] };
+            }
+            return null;
+          }).filter(Boolean);
+          const satisfies = (lhs, sign, bound) => sign === '<=' ? lhs <= bound + 1e-8 : sign === '>=' ? lhs >= bound - 1e-8 : Math.abs(lhs - bound) <= 1e-8;
+          const integer_points = [];
+          for (let x = 0; x <= Math.min(Math.ceil(xMax), 80); x++) {
+            for (let y = 0; y <= Math.min(Math.ceil(yMax), 80); y++) {
+              if (constraints.every((row, idx) => satisfies((row[0] || 0) * x + (row[1] || 0) * y, signs[idx], rhs[idx]))) {
+                integer_points.push({ x, y, z: objective[0] * x + objective[1] * y });
+              }
+            }
+          }
+          const graph = { boundary_lines, integer_points };
+          if (lpVars) graph.lp_solution = { x1: lpVars.x1 || 0, x2: lpVars.x2 || 0 };
+          if (intVars) graph.integer_solution = { x1: intVars.x1 || 0, x2: intVars.x2 || 0 };
+          return graph;
+        },
+
+        hasFeasibleGraph() {
+          const graph = this.getFeasibleGraphData();
+          return !!(graph && graph.boundary_lines && graph.boundary_lines.length);
+        },
+
+        renderResultVisuals() {
+          this.$nextTick(() => {
+            setTimeout(() => {
+              this.renderFeasibleRegion();
+              this.renderTree();
+            }, 0);
+          });
+        },
+        formatEquation(row) {
+          return formatConstraintEquation(row, this.table.varNames);
+        },
+
+        syncIntVars() {
+          while (this.intVars.length < this.table.cols) this.intVars.push(true);
+          while (this.intVars.length > this.table.cols) this.intVars.pop();
+        },
+
+        getProblemInput() {
+          const input = getLpProblemInput(this.table, this.optimization);
+          input.integer_vars = this.intVars.map((v, j) => v ? j : -1).filter(j => j >= 0);
+          validateIntegerProblemInput(input);
+          return input;
+        },
+
+        exportProblem() {
+          this.error = '';
+          try {
+            downloadProblemJson('integer-programming', this.getProblemInput());
+          } catch (e) {
+            this.error = e.message || 'Export failed.';
+          }
+        },
+
+        onInputChange() {
+          this.result = null;
+          this.error = '';
+          if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+        },
+
+        async importProblem(event) {
+          this.error = '';
+          try {
+            const input = await importProblemFromFile(event, 'integer-programming', validateIntegerProblemInput);
+            if (!input) return;
+            applyLpProblemInput(this.table, input);
+            this.optimization = input.optimization;
+            this.result = null;
+            const tree = document.getElementById('plotly-tree');
+            if (tree) tree.innerHTML = '';
+            if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+          } catch (e) {
+            this.error = e.message || 'Import failed.';
+          }
+        },
+
+        async solve() {
+          this.error = '';
+          this.result = null;
+          const el = document.getElementById('plotly-tree'); if (el) el.innerHTML = '';
+          if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+
+          const vals = this.table.getAllValues();
+          const objective = vals[0].cells;
+          if (objective.some(isNaN)) { this.error = 'Objective coefficients must be numeric.'; return; }
+
+          const constraints = [];
+          const signs = [];
+          const rhs = [];
+          for (let i = 1; i < vals.length; i++) {
+            const r = vals[i];
+            const coeffs = r.cells;
+            if (coeffs.some(isNaN) || isNaN(r.rhs)) { this.error = 'All constraint values must be numeric.'; return; }
+            constraints.push(coeffs);
+            signs.push(r.sign);
+            rhs.push(r.rhs);
+          }
+          if (constraints.length === 0) { this.error = 'Add at least one constraint.'; return; }
+
+          const intIndices = this.intVars.map((v, j) => v ? j : -1).filter(j => j >= 0);
+
+          const input = { objective, constraints, signs, rhs, integer_vars: intIndices, optimization: this.optimization };
+          const cacheKey = getCacheKey('integer-programming', input);
+          const cached = getFromCache(cacheKey);
+          if (cached && cached.result && cached.result.feasible_graph) { this.result = cached.result; this.$nextTick(() => { this.renderFeasibleRegion(); this.renderTree(); }); return; }
+          this.loading = true;
+          try {
+            const data = await solve('integer-programming', input);
+            this.result = data;
+            setCache(cacheKey, data);
+            this.$nextTick(() => { this.renderFeasibleRegion(); this.renderTree(); });
+          } catch (e) { this.error = e.message || 'API error'; } finally { this.loading = false; }
+        },
+
+        renderIntegerSteps(steps) {
+          if (!steps || steps.length === 0) return '<p class="text-slate-500 dark:text-slate-400 text-sm">' + Alpine.store('i18n').t('no.steps') + '</p>';
+
+          const formatExpr = coeffs => formatLinearExpressionText(coeffs);
+
+          const formatValues = values => Object.entries(values || {})
+            .sort(([a], [b]) => Number(a.slice(1)) - Number(b.slice(1)))
+            .map(([name, value]) => `${formatVariableName(name)}=${formatNumber(value)}`)
+            .join(', ');
+
+          const summaryRow = (label, value) => `
+            <div class="grid gap-1 sm:grid-cols-[150px_1fr]">
+              <dt class="font-semibold text-slate-700 dark:text-slate-200">${label}</dt>
+              <dd class="text-slate-700 dark:text-slate-300">${escHtml(formatMathText(value || 'none'))}</dd>
+            </div>`;
+
+          const compactFixedValueCalculations = lines => {
+            const cleanLines = (lines || []).filter(line => line !== null && line !== undefined);
+            if (!cleanLines.length) return cleanLines;
+
+            const firstLine = String(cleanLines[0]);
+            const withMatch = firstLine.match(/^With (.*):$/);
+            if (!withMatch) return cleanLines;
+
+            const seen = new Set();
+            const fixedParts = withMatch[1].split(',')
+              .map(part => part.trim())
+              .filter(part => {
+                const name = (part.match(/^([a-z]\d+)\s*=/) || [])[1];
+                if (!name || seen.has(name)) return false;
+                seen.add(name);
+                return true;
+              });
+            if (!fixedParts.length) return cleanLines;
+
+            let idx = 1;
+            const spacing = [];
+            while (idx < cleanLines.length) {
+              const line = String(cleanLines[idx]);
+              if (line === '') {
+                spacing.push(line);
+                idx += 1;
+                break;
+              }
+              const assignment = line.trim().match(/^([a-z]\d+)\s*=\s*-?\d+(?:\.\d+)?$/);
+              if (!assignment || !seen.has(assignment[1])) break;
+              idx += 1;
+            }
+
+            return [`With ${fixedParts.join(', ')}:`, ...spacing, ...cleanLines.slice(idx)];
+          };
+
+          const calculationDetails = (lines, extraHtml = '') => {
+            const cleanLines = compactFixedValueCalculations(lines);
+            if (!cleanLines.length && !extraHtml) return '';
+            const lineHtml = cleanLines.map(line => line === ''
+              ? '<div class="h-2"></div>'
+              : `<div>${escHtml(formatMathText(line))}</div>`).join('');
+            return `
+              <details class="mt-3 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/40">
+                <summary class="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200">${Alpine.store('i18n').t('show.calculations')}</summary>
+                <div class="px-3 pb-3 pt-1 text-xs text-slate-700 dark:text-slate-300 space-y-2">
+                  ${lineHtml ? `<div class="font-mono leading-5">${lineHtml}</div>` : ''}
+                  ${extraHtml}
+                </div>
+              </details>`;
+          };
+
+          const renderNodeStep = (step, idx) => {
+            const data = step.data || {};
+            let branchHtml = '';
+            if (data.inherited_constraints && data.inherited_constraints.length) {
+              branchHtml += summaryRow('Inherited branch constraints:', data.inherited_constraints.join(', '));
+            }
+            if (data.new_constraint) {
+              branchHtml += summaryRow('New branch constraint:', data.new_constraint);
+            }
+
+            let calcExtra = '';
+            if (data.redundancy_notes && data.redundancy_notes.length) {
+              calcExtra += `<div class="text-xs text-zinc-500 dark:text-zinc-400">${escHtml(data.redundancy_notes.join('; '))}</div>`;
+            }
+
+            if (data.simplified_constraints && data.simplified_constraints.length) {
+              branchHtml += summaryRow('Simplified branch constraints:', data.simplified_constraints.join(', '));
+            }
+
+            const lpResult = data.lp_status && data.lp_status !== 'Optimal'
+              ? data.lp_status
+              : `${formatValues(data.variables)}, Z=${formatNumber(data.value)}`;
+            return `
+              <div class="border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 p-4 text-sm">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                  <h3 class="font-semibold text-slate-900 dark:text-slate-50">${escHtml(data.node_name || `Step ${idx + 1}`)}</h3>
+                  <span class="text-xs text-slate-500 dark:text-slate-400">Step ${idx + 1}</span>
+                </div>
+                <dl class="space-y-2">
+                  ${branchHtml}
+                  ${summaryRow('LP relaxation result:', lpResult)}
+                  ${summaryRow('Integer check:', data.integer_check || 'checked')}
+                  ${summaryRow('Decision:', data.decision || step.description || 'completed')}
+                </dl>
+                ${calculationDetails(data.calculations, calcExtra)}
+              </div>`;
+          };
+
+          const renderGeneralStep = (step, idx) => {
+            const data = step.data || {};
+            let lines = [];
+            let extraHtml = '';
+            if (data.objective && data.constraints) {
+              const intText = (data.integer_variables || []).length ? data.integer_variables.map(formatVariableName).join(', ') : 'none';
+              lines = [
+                `Objective: Z = ${formatExpr(data.objective)} (${this.optimization}imize).`,
+                `LP relaxation: ignore integrality temporarily; integer variables are ${intText}.`,
+                'Graph setup: set x2=0 for the x1 intercept, then set x1=0 for the x2 intercept.',
+              ];
+              if (data.intercepts && data.intercepts.length) {
+                extraHtml = renderTable(['Constraint', 'Equation', 'x2 = 0', 'x1 = 0'], data.intercepts, 'Graph intercepts');
+              }
+            } else if (data.variables && data.optimal_value !== undefined) {
+              lines = [`Final integer solution: ${formatValues(data.variables)}, Z=${formatNumber(data.optimal_value)}.`];
+            } else if (data.nodes_explored !== undefined) {
+              lines = [`Nodes explored: ${data.nodes_explored}.`];
+            } else {
+              lines = [step.description || 'Step completed.'];
+            }
+
+            return `
+              <div class="border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 p-4 text-sm">
+                <div class="flex items-start justify-between gap-3 mb-2">
+                  <h3 class="font-semibold text-slate-900 dark:text-slate-50">Step ${idx + 1}</h3>
+                  <span class="text-xs text-slate-500 dark:text-slate-400">${escHtml(formatMathText(step.description || ''))}</span>
+                </div>
+                <ul class="list-disc pl-5 space-y-1 text-slate-700 dark:text-slate-300">
+                  ${lines.map(line => `<li>${escHtml(formatMathText(line))}</li>`).join('')}
+                </ul>
+                ${extraHtml ? calculationDetails([], extraHtml) : ''}
+              </div>`;
+          };
+
+          return `<div class="space-y-3">${steps.map((step, idx) => (step.data && step.data.node_name) ? renderNodeStep(step, idx) : renderGeneralStep(step, idx)).join('')}</div>`;
+        },
+
+        renderFeasibleRegion() {
+          const canvas = document.getElementById('graph-canvas');
+          const gData = this.getFeasibleGraphData();
+          if (!canvas || !gData || !gData.boundary_lines || !gData.boundary_lines.length) return;
+          if (this.chartInstance) this.chartInstance.destroy();
+          const ctx = canvas.getContext('2d');
+          const palette = getChartPalette();
+          const datasets = gData.boundary_lines.map((line, i) => ({
+            label: line.label,
+            data: line.x.map((_, idx) => ({ x: line.x[idx], y: line.y[idx] })),
+            borderColor: palette[i % palette.length],
+            borderWidth: 1.5,
+            pointRadius: 0,
+            showLine: true,
+          }));
+          if (gData.integer_points && gData.integer_points.length) {
+            datasets.push({
+              label: Alpine.store('i18n').t('integer.feasible.points'),
+              data: gData.integer_points.map(p => ({ x: p.x, y: p.y })),
+              backgroundColor: isDarkMode() ? '#94a3b8' : '#475569',
+              borderColor: isDarkMode() ? '#94a3b8' : '#475569',
+              pointRadius: 3,
+              showLine: false,
+            });
+          }
+          if (gData.lp_solution) {
+            datasets.push({
+              label: Alpine.store('i18n').t('lp.relaxation'),
+              data: [{ x: gData.lp_solution.x1 ?? 0, y: gData.lp_solution.x2 ?? 0 }],
+              backgroundColor: '#d97706',
+              borderColor: '#d97706',
+              pointRadius: 6,
+              pointStyle: 'rectRot',
+              showLine: false,
+            });
+          }
+          if (gData.integer_solution) {
+            datasets.push({
+              label: Alpine.store('i18n').t('integer.optimum'),
+              data: [{ x: gData.integer_solution.x1 ?? 0, y: gData.integer_solution.x2 ?? 0 }],
+              backgroundColor: '#4f46e5',
+              borderColor: '#4f46e5',
+              pointRadius: 7,
+              showLine: false,
+            });
+          }
+          this.chartInstance = new Chart(ctx, {
+            type: 'scatter',
+            data: { datasets },
+            options: getChartOptions({
+              maintainAspectRatio: false,
+              plugins: { legend: { labels: { font: { size: 11 } } } },
+              scales: {
+                x: { type: 'linear', position: 'bottom', min: 0, title: { display: true, text: formatVariableName('x1') } },
+                y: { min: 0, title: { display: true, text: formatVariableName('x2') } },
+              },
+            }),
+          });
+        },
+        renderTree() {
+          const el = document.getElementById('plotly-tree');
+          if (!el) return;
+          el.innerHTML = '';
+
+          if (!this.result || !this.result.graph || !this.result.graph.data) return;
+          const treeData = this.result.graph.data;
+          const nodes = treeData.nodes || [];
+          const edges = treeData.edges || [];
+          const plotlyTheme = getPlotlyTheme();
+          const palette = getChartPalette();
+
+          if (nodes.length === 0) {
+            el.innerHTML = '<p class="text-sm text-slate-500 dark:text-zinc-400 py-8 text-center">' + Alpine.store('i18n').t('no.nodes') + '</p>';
+            return;
+          }
+          if (typeof Plotly === 'undefined') {
+            el.innerHTML = '<p class="text-sm text-slate-500 dark:text-zinc-400 py-8 text-center">' + Alpine.store('i18n').t('no.renderer') + '</p>';
+            return;
+          }
+
+          const nodeById = new Map(nodes.map(n => [n.id, n]));
+          const children = {};
+          const parentMap = {};
+          for (const e of edges) {
+            if (!nodeById.has(e.from) || !nodeById.has(e.to)) continue;
+            if (!children[e.from]) children[e.from] = [];
+            children[e.from].push(e.to);
+            parentMap[e.to] = e.from;
+          }
+
+          const root = nodes.find(n => parentMap[n.id] === undefined) || nodes[0];
+          const positions = {};
+          const depth = {};
+          const visited = new Set();
+          let nextLeaf = 0;
+
+          function layoutNode(id, d) {
+            if (visited.has(id)) return positions[id].rawX;
+            visited.add(id);
+            depth[id] = d;
+            const nodeChildren = (children[id] || []).slice().sort((a, b) => Number(a) - Number(b));
+            if (nodeChildren.length === 0) {
+              positions[id] = { rawX: nextLeaf, depth: d };
+              nextLeaf += 1;
+              return positions[id].rawX;
+            }
+            const childXs = nodeChildren.map(childId => layoutNode(childId, d + 1));
+            const rawX = (Math.min(...childXs) + Math.max(...childXs)) / 2;
+            positions[id] = { rawX, depth: d };
+            return rawX;
+          }
+
+          layoutNode(root.id, 0);
+          for (const n of nodes) {
+            if (!visited.has(n.id)) layoutNode(n.id, 0);
+          }
+
+          const leafCount = Math.max(nextLeaf, 1);
+          const maxDepth = Math.max(...Object.values(depth), 0);
+          const xSpacing = 2.6;
+          const ySpacing = 1.55;
+          for (const pos of Object.values(positions)) {
+            pos.x = (pos.rawX - (leafCount - 1) / 2) * xSpacing;
+            pos.y = -pos.depth * ySpacing;
+          }
+
+          const plotHeight = Math.max(430, (maxDepth + 1) * 130);
+          el.style.height = plotHeight + 'px';
+
+          const edgeTraces = edges.map(e => {
+            const fromPos = positions[e.from];
+            const toPos = positions[e.to];
+            if (!fromPos || !toPos) return null;
+            return {
+              type: 'scatter',
+              mode: 'lines',
+              x: [fromPos.x, toPos.x],
+              y: [fromPos.y, toPos.y],
+              line: { color: plotlyTheme.edge, width: 1.5 },
+              hoverinfo: 'skip',
+              showlegend: false,
+            };
+          }).filter(Boolean);
+
+          const edgeLabels = edges.map(e => {
+            const fromPos = positions[e.from];
+            const toPos = positions[e.to];
+            if (!fromPos || !toPos || !e.label) return null;
+            return {
+              x: (fromPos.x + toPos.x) / 2,
+              y: (fromPos.y + toPos.y) / 2,
+              xref: 'x', yref: 'y',
+              text: formatMathText(e.label),
+              showarrow: false,
+              font: { size: 9, color: plotlyTheme.mutedText },
+              bgcolor: plotlyTheme.labelBg,
+              borderpad: 2,
+            };
+          }).filter(Boolean);
+
+          const formatNodeLabel = node => {
+            const lines = String(node.label || '')
+              .replace('Integer Optimal', 'Integer\nOptimal')
+              .split('\n')
+              .filter(Boolean);
+            const title = lines[0] === 'X' ? 'Infeasible' : lines[0];
+            const zLine = lines.find(line => /^Z=/.test(line));
+            const labelLines = [formatMathText(title)];
+            if (zLine) {
+              labelLines.push(zLine.replace(/Z=(-?\d+(?:\.\d+)?)/g, (_match, value) => 'Z=' + formatNumber(Number(value))));
+            } else if (lines[1]) {
+              labelLines.push(formatMathText(lines[1]));
+            }
+
+            const valueLines = Object.entries(node.values || {})
+              .sort(([a], [b]) => Number(a.slice(1)) - Number(b.slice(1)))
+              .slice(0, 2)
+              .map(([name, value]) => `${formatVariableName(name)}=${formatNumber(value)}`);
+            return labelLines.concat(valueLines).join('<br>');
+          };
+
+          const nodeColors = {
+            relaxation: '#0f766e',
+            fractional: '#0f766e',
+            optimal: '#4f46e5',
+            infeasible: '#92400e',
+            unbounded: '#334155',
+          };
+          const nodeTrace = {
+            type: 'scatter',
+            mode: 'markers+text',
+            x: nodes.map(n => positions[n.id].x),
+            y: nodes.map(n => positions[n.id].y),
+            marker: {
+              symbol: 'circle',
+              size: 92,
+              color: nodes.map(n => nodeColors[n.type] || '#475569'),
+              line: { color: plotlyTheme.nodeLine, width: 2 },
+            },
+            text: nodes.map(n => formatNodeLabel(n)),
+            textposition: 'middle center',
+            textfont: { size: 9, color: '#f8fafc' },
+            hoverinfo: 'skip',
+            showlegend: false,
+          };
+
+          const xValues = nodes.map(n => positions[n.id].x);
+          const minX = Math.min(...xValues);
+          const maxX = Math.max(...xValues);
+          const layout = {
+            xaxis: { visible: false, showgrid: false, zeroline: false, fixedrange: true, range: [minX - 1.4, maxX + 1.4] },
+            yaxis: { visible: false, showgrid: false, zeroline: false, fixedrange: true, range: [-maxDepth * ySpacing - 0.7, 0.7] },
+            plot_bgcolor: plotlyTheme.plotBg,
+            paper_bgcolor: plotlyTheme.paperBg,
+            margin: { l: 20, r: 20, t: 20, b: 20 },
+            hovermode: false,
+            dragmode: false,
+            font: { family: 'monospace', color: plotlyTheme.text },
+            annotations: edgeLabels,
+          };
+          const config = { responsive: true, displayModeBar: false, staticPlot: true };
+          Plotly.newPlot(el, [...edgeTraces, nodeTrace], layout, config);
+        },
+        clearTable() {
+          this.error = '';
+          this.result = null;
+
+          if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+          this.table = createTableState(3, 2, { labels: true });
+          this.intVars = [true, true];
+          for (let i = 1; i < this.table.rows.length; i++) this.table.rows[i].label = 'Constraint ' + i;
+          this._wrapAddRow();
+        },
+
+        init() {
+          this.table = createTableState(3, 2, { labels: true });
+          this.intVars = [true, true];
+          for (let i = 1; i < this.table.rows.length; i++) this.table.rows[i].label = 'Constraint ' + i;
+          this._wrapAddRow();
+        },
+
+        _wrapAddRow() {
+          const orig = this.table.addRow.bind(this.table);
+          const self = this;
+          this.table.addRow = function () {
+            orig();
+            self.table.rows[self.table.rows.length - 1].label = 'Constraint ' + (self.table.rows.length - 1);
+          };
+        },
+      };
+    }
+  </script>
+</body>
+</html>
+
+
+
+

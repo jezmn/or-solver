@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goal Programming - OR Solver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>document.documentElement.classList.add('dark');</script>
+  <link href="/css/tailwind.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+  <script src="js/api.js"></script>
+  <script src="js/cache.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/table-input.js"></script>
+  <script src="js/problem-io.js"></script>
+  <style>[x-cloak] { display: none !important; }
+* { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+*::-webkit-scrollbar { width: 5px; height: 5px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+*::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.dark * { scrollbar-color: #475569 transparent; }
+.dark *::-webkit-scrollbar-thumb { background: #475569; }
+.dark *::-webkit-scrollbar-thumb:hover { background: #64748b; }</style>
+</head>
+  <body class="bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 min-h-screen font-['JetBrains_Mono','monospace']" x-cloak x-data="gpPage()">
+  <nav class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md text-zinc-900 dark:text-zinc-100 shadow-lg border-b border-zinc-200 dark:border-zinc-700/50">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/" class="text-xl font-bold tracking-tight" x-text="$store.i18n.t('site.title')">OR Solver</a>
+      <div class="flex items-center gap-3">
+        <span class="flex items-center gap-1 text-xs font-medium">
+          <a href="#" @click.prevent="$store.i18n.toggle()" x-text="$store.i18n.lang === 'en' ? '[en]' : 'en'" class="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors" :class="$store.i18n.lang === 'en' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'"></a>
+          <span class="text-zinc-300 dark:text-zinc-600">/</span>
+          <a href="#" @click.prevent="$store.i18n.toggle()" x-text="$store.i18n.lang === 'es' ? '[es]' : 'es'" class="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors" :class="$store.i18n.lang === 'es' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'"></a>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+    <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.store('dark', document.documentElement.classList.contains('dark'));
+    });
+  </script>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <div class="flex items-center gap-2 mb-6">
+      <a href="/" class="text-sm text-zinc-600 dark:text-zinc-400 hover:underline" x-text="$store.i18n.t('back')">← Back</a>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-zinc-50" x-text="$store.i18n.t('gp.page.title')">Goal Programming</h1>
+    </div>
+
+    <div x-show="error" x-text="error" class="bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm mb-4"></div>
+
+    <div class="max-w-5xl mx-auto space-y-6">
+      <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 class="text-lg font-bold" x-text="$store.i18n.t('problem.input')">Problem Input</h2>
+          <div data-problem-io-controls class="flex items-center gap-2">
+            <button type="button" @click="exportProblem()" class="text-xs bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 px-3 py-1.5 rounded hover:bg-zinc-300 dark:hover:bg-zinc-600 transition" x-text="$store.i18n.t('export')">Export</button>
+            <label class="text-xs bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 px-3 py-1.5 rounded hover:bg-zinc-300 dark:hover:bg-zinc-600 transition cursor-pointer">
+              <span x-text="$store.i18n.t('import')">Import</span>
+              <input type="file" accept="application/json,.json" @change="importProblem($event)" class="sr-only dark:text-zinc-100 dark:placeholder-zinc-500">
+            </label>
+          </div>
+        </div>
+        <div class="space-y-4" @input="onInputChange()">
+
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300" x-text="$store.i18n.t('variable')">Variables</label>
+              <div class="flex gap-1">
+                <button @click="addCol()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-text="$store.i18n.t('add.variable')">+ Variable</button>
+                <button @click="removeCol()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-show="numCols > 1" x-text="$store.i18n.t('remove.variable')">− Variable</button>
+              </div>
+            </div>
+            <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-700">
+              <table class="min-w-full text-xs border-collapse bg-white dark:bg-zinc-800">
+                <thead>
+                  <tr class="bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200">
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-40" x-text="$store.i18n.t('name')">Name</th>
+                    <template x-for="(_, i) in Array(numCols).fill()" :key="i">
+                      <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20 min-w-[80px]">
+                        <input type="text" x-model="varNames[i]" class="w-full px-1 py-1 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded">
+                      </th>
+                    </template>
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('wt.plus')">Wt(d+)</th>
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('prty.plus')">Prty(d+)</th>
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('wt.minus')">Wt(d-)</th>
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('prty.minus')">Prty(d-)</th>
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-16" x-text="$store.i18n.t('sign')">Sign</th>
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('rhs')">RHS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="(row, i) in rows" :key="i">
+                    <tr>
+                      <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                        <input type="text" x-model="rows[i].label" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 text-xs focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400" :placeholder="$store.i18n.t('name')">
+                      </td>
+                      <template x-for="(_, j) in Array(numCols).fill()" :key="j">
+                        <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                          <input type="text" x-model="rows[i].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                        </td>
+                      </template>
+                      <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                        <input type="text" x-model="rows[i].wt_plus" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                      </td>
+                      <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                        <input type="text" x-model="rows[i].prty_plus" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                      </td>
+                      <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                        <input type="text" x-model="rows[i].wt_minus" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                      </td>
+                      <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                        <input type="text" x-model="rows[i].prty_minus" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                      </td>
+                      <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                        <select x-model="rows[i].sign" class="w-full px-1 py-1.5 text-center bg-white/70 dark:bg-zinc-900/60 border-0 outline-none text-xs text-slate-800 dark:text-zinc-100 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500">
+                          <option value="=">=</option>
+                          <option value="<=">≤</option>
+                          <option value=">=">≥</option>
+                        </select>
+                      </td>
+                      <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                        <input type="text" x-model="rows[i].rhs" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                      </td>
+                    </tr>
+                  </template>
+                <tr x-show="result && result.status === 'optimal'" class="bg-zinc-100 dark:bg-zinc-800/60 font-semibold">
+                  <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center text-xs font-bold text-zinc-700 dark:text-zinc-300" x-text="$store.i18n.t('solution.row')">Solution</td>
+                  <template x-for="(_, j) in Array(numCols).fill()" :key="j">
+                    <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-mono text-xs text-zinc-800 dark:text-zinc-200" x-text="formatNumber((result?.solution?.variables ?? {})['x' + (j + 1)])"></td>
+                  </template>
+                  <td class="border border-slate-300 dark:border-zinc-700"></td>
+                  <td class="border border-slate-300 dark:border-zinc-700"></td>
+                  <td class="border border-slate-300 dark:border-zinc-700"></td>
+                  <td class="border border-slate-300 dark:border-zinc-700"></td>
+                  <td class="border border-slate-300 dark:border-zinc-700"></td>
+                  <td class="border border-slate-300 dark:border-zinc-700"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="flex gap-2 mt-2">
+              <button @click="addRow()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-3 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-text="$store.i18n.t('add.goal')">+ Goal</button>
+              <button @click="removeRow()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-3 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-show="rows.length > 1" x-text="$store.i18n.t('remove.goal')">− Goal</button>
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <button @click="clearTable()" class="flex-1 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-semibold py-2 rounded-lg transition text-sm" x-text="$store.i18n.t('clear.table')">Clear table</button>
+            <button @click="solve()" class="flex-1 bg-zinc-800 dark:bg-zinc-200 hover:bg-zinc-700 dark:hover:bg-zinc-300 text-white dark:text-zinc-900 font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2" :disabled="loading">
+            <span x-show="loading">
+              <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            </span>
+            <span x-text="loading ? $store.i18n.t('solving') : $store.i18n.t('solve')"></span>
+          </button>
+          </div>
+        </div>
+      </div>
+
+      <div x-show="!result" class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6 flex flex-col items-center justify-center text-center min-h-[300px]">
+        <svg class="w-16 h-16 text-slate-300 dark:text-zinc-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        <h3 class="text-lg font-semibold text-slate-400 dark:text-zinc-500 mb-2" x-text="$store.i18n.t('waiting.title')">Waiting for Solution</h3>
+        <p class="text-sm text-slate-400 dark:text-zinc-500 max-w-xs" x-text="$store.i18n.t('waiting.full')">Configure your problem and click Solve to see results here.</p>
+      </div>
+      <div class="space-y-4" x-show="result">
+        <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold" x-text="$store.i18n.t('solution')">Solution</h2>
+          </div>
+          <div x-show="result?.status === 'optimal'" class="space-y-2 text-sm">
+            <div class="mt-2">
+              <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('decision.variables')">Decision Variables</h4>
+              <template x-for="(v, name) in (result?.solution?.variables ?? {})" :key="name">
+                <div class="flex justify-between text-xs border-b border-slate-100 dark:border-zinc-700 py-1"><span class="font-mono" x-text="formatVariableName(name)"></span><span class="font-mono" x-text="formatNumber(v)"></span></div>
+              </template>
+            </div>
+            <div class="mt-3">
+              <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('goals.achieved')">Goals Achieved</h4>
+              <template x-for="(g, i) in (result?.solution?.objectives_achieved ?? [])" :key="i">
+                <div class="text-xs border border-slate-200 dark:border-zinc-700 rounded p-2 mb-1 bg-slate-50 dark:bg-zinc-800/70 text-slate-700 dark:text-zinc-300">
+                  <div><span class="font-semibold" x-text="$store.i18n.t('goal.label')">Goal:</span> <span x-text="(rows[i]?.label || 'Goal ' + (i + 1))"></span></div>
+                  <div><span class="font-semibold" x-text="$store.i18n.t('target.label')">Target:</span> <span x-text="formatNumber(g.target)"></span></div>
+                  <div><span class="font-semibold" x-text="$store.i18n.t('achieved.label')">Achieved:</span> <span x-text="formatNumber(g.achieved)" :class="Math.abs(g.deviation) > 0.01 ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'"></span></div>
+                  <div><span class="font-semibold" x-text="$store.i18n.t('deviation.label')">Deviation:</span> <span x-text="formatNumber(g.deviation)" :class="Math.abs(g.deviation) > 0.01 ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'"></span></div>
+                </div>
+              </template>
+            </div>
+            <div class="mt-3" x-show="result?.solution?.priority_nonachievement?.length">
+              <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('nonachievement.priority')">Nonachievement by Priority</h4>
+              <template x-for="p in (result?.solution?.priority_nonachievement ?? [])" :key="p.priority">
+                <div class="flex justify-between text-xs border-b border-slate-100 dark:border-zinc-700 py-1">
+                  <span class="font-mono" x-text="$store.i18n.t('priority.label') + ' ' + p.priority"></span>
+                  <span class="font-mono" x-text="formatNumber(p.nonachievement)" :class="p.nonachievement > 0.01 ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+          <div x-show="result?.status && result.status !== 'optimal'" x-html="result?.status ? renderSolverStatusBlock(result.status, result) : ''"></div>
+        </div>
+
+        <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="result?.steps?.length">
+          <h2 class="text-lg font-bold mb-3" x-text="$store.i18n.t('steps')">Steps</h2>
+          <div id="steps-container" x-html="result?.steps?.length ? renderSteps(result.steps) : ''"></div>
+        </div>
+
+        <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="result?.graph?.data?.objectives_achieved">
+          <h2 class="text-lg font-bold mb-3" x-text="$store.i18n.t('goal.achievement')">Goal Achievement</h2>
+          <canvas id="graph-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function gpPage() {
+      return {
+        rows: [],
+        numCols: 2,
+        varNames: ['x1', 'x2'],
+        loading: false,
+        result: null,
+        error: '',
+        chartInstance: null,
+
+        getProblemInput() {
+          const objectives = [];
+          const constraints = [];
+          const signs = [];
+          const rhs = [];
+          const labels = [];
+
+          for (const row of this.rows) {
+            const coeffs = row.cells.map(Number);
+            const hasRhs = row.rhs !== '';
+            const wtp = row.wt_plus !== '' ? Number(row.wt_plus) : 0;
+            const prp = row.prty_plus !== '' ? Number(row.prty_plus) : 0;
+            const wtm = row.wt_minus !== '' ? Number(row.wt_minus) : 0;
+            const prm = row.prty_minus !== '' ? Number(row.prty_minus) : 0;
+
+            const isGoal = hasRhs && (wtp !== 0 || prp !== 0 || wtm !== 0 || prm !== 0);
+            const isConstraint = hasRhs && !isGoal;
+
+            if (isConstraint) {
+              constraints.push(coeffs);
+              signs.push(row.sign);
+              rhs.push(Number(row.rhs));
+              labels.push(row.label || '');
+            }
+            if (isGoal) {
+              objectives.push({
+                coefficients: coeffs,
+                target: Number(row.rhs),
+                wt_plus: wtp,
+                prty_plus: prp,
+                wt_minus: wtm,
+                prty_minus: prm,
+              });
+            }
+          }
+
+          const input = { objectives, constraints, signs, rhs, labels, varNames: this.varNames };
+          validateGoalProblemInput(input);
+          return input;
+        },
+
+        exportProblem() {
+          this.error = '';
+          try {
+            downloadProblemJson('goal-programming', this.getProblemInput());
+          } catch (e) {
+            this.error = e.message || 'Export failed.';
+          }
+        },
+
+        onInputChange() {
+          this.result = null;
+
+          this.error = '';
+          if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+        },
+
+        async importProblem(event) {
+          this.error = '';
+          try {
+            const input = await importProblemFromFile(event, 'goal-programming', validateGoalProblemInput);
+            if (!input) return;
+            this.rows = [];
+            const varCount = input.objectives[0].coefficients.length;
+            this.numCols = varCount;
+            this.varNames = Array.isArray(input.varNames) && input.varNames.length === varCount
+              ? [...input.varNames]
+              : Array.from({ length: varCount }, (_, i) => 'x' + (i + 1));
+
+            let goalIdx = 0;
+            for (const obj of input.objectives) {
+              this.rows.push({
+                cells: obj.coefficients.map(inputValue),
+                wt_plus: inputValue(obj.wt_plus !== undefined ? obj.wt_plus : obj.weight !== undefined ? obj.weight : 0),
+                prty_plus: inputValue(obj.prty_plus !== undefined ? obj.prty_plus : obj.priority !== undefined ? obj.priority : 0),
+                wt_minus: inputValue(obj.wt_minus !== undefined ? obj.wt_minus : obj.weight !== undefined ? obj.weight : 0),
+                prty_minus: inputValue(obj.prty_minus !== undefined ? obj.prty_minus : obj.priority !== undefined ? obj.priority : 0),
+                sign: '=',
+                rhs: inputValue(obj.target),
+                label: (input.labels && input.labels[goalIdx]) || 'Goal ' + (goalIdx + 1),
+              });
+              goalIdx++;
+            }
+
+            let constraintLabelIdx = 0;
+            for (let i = 0; i < input.constraints.length; i++) {
+              const coeffs = input.constraints[i];
+              const sig = input.signs[i];
+              const r = input.rhs[i];
+
+              const isDuplicate = input.objectives.some(obj =>
+                obj.coefficients.length === coeffs.length &&
+                obj.coefficients.every((c, j) => Math.abs(Number(c) - Number(coeffs[j])) < 1e-9) &&
+                Math.abs(Number(obj.target) - Number(r)) < 1e-9
+              );
+              if (isDuplicate) continue;
+
+              const labelIdx = goalIdx + constraintLabelIdx;
+              this.rows.push({
+                cells: coeffs.map(inputValue),
+                wt_plus: '',
+                prty_plus: '',
+                wt_minus: '',
+                prty_minus: '',
+                sign: sig,
+                rhs: inputValue(r),
+                label: (input.labels && input.labels[labelIdx]) || 'Constraint ' + (constraintLabelIdx + 1),
+              });
+              constraintLabelIdx++;
+            }
+            this.result = null;
+
+            if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+          } catch (e) {
+            this.error = e.message || 'Import failed.';
+          }
+        },
+
+        addCol() {
+          for (const row of this.rows) row.cells.push('');
+          this.numCols++;
+          this.varNames.push('x' + this.numCols);
+        },
+
+        removeCol() {
+          if (this.numCols > 1) {
+            for (const row of this.rows) row.cells.pop();
+            this.numCols--;
+            this.varNames.pop();
+          }
+        },
+
+        addRow() {
+          this.rows.push({
+            cells: Array(this.numCols).fill(''),
+            wt_plus: '',
+            prty_plus: '',
+            wt_minus: '',
+            prty_minus: '',
+            sign: '=',
+            rhs: '',
+            label: 'Goal ' + (this.rows.length + 1),
+          });
+        },
+
+        addConstraint() {
+          this.rows.push({
+            cells: Array(this.numCols).fill(''),
+            wt_plus: '',
+            prty_plus: '',
+            wt_minus: '',
+            prty_minus: '',
+            sign: '=',
+            rhs: '',
+            label: 'Constraint ' + (this.rows.length + 1),
+          });
+        },
+
+        removeRow() {
+          if (this.rows.length > 1) this.rows.pop();
+        },
+
+        async solve() {
+          this.error = '';
+          this.result = null;
+
+          if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+
+          let input;
+          try {
+            input = this.getProblemInput();
+          } catch (e) {
+            this.error = e.message;
+            return;
+          }
+
+          if (input.objectives.length === 0) { this.error = 'Add at least one goal.'; return; }
+
+          const cacheKey = getCacheKey('goal-programming', input);
+          const cached = getFromCache(cacheKey);
+          if (cached) { this.result = cached.result;  this.$nextTick(() => { this.renderGraph(); }); return; }
+
+          this.loading = true;
+          try {
+            const data = await solve('goal-programming', input);
+            this.result = data;
+            setCache(cacheKey, data);
+            this.$nextTick(() => { this.renderGraph(); });
+          } catch (e) { this.error = e.message || 'API error'; } finally { this.loading = false; }
+        },
+
+        renderGraph() {
+          const canvas = document.getElementById('graph-canvas');
+          if (!canvas || !this.result || !this.result.graph || !this.result.graph.data || !this.result.graph.data.objectives_achieved) return;
+          if (this.chartInstance) this.chartInstance.destroy();
+          const ctx = canvas.getContext('2d');
+          const data = this.result.graph.data.objectives_achieved;
+          const goalLabels = this.rows.map((r, i) => r.label || `Goal ${i + 1}`);
+          const doneColor = '#22c55e';
+          const missColor = '#ef4444';
+          this.chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: goalLabels,
+              datasets: [
+                {
+                  label: Alpine.store('i18n').t('chart.target'),
+                  data: data.map(d => d.target),
+                  backgroundColor: isDarkMode() ? '#64748b' : '#94a3b8',
+                },
+                {
+                  label: Alpine.store('i18n').t('chart.achieved'),
+                  data: data.map(d => d.achieved),
+                  backgroundColor: data.map(d => Math.abs(d.deviation) > 0.01 ? missColor : doneColor),
+                },
+              ],
+            },
+            options: getChartOptions({
+              plugins: {
+                legend: { labels: { font: { size: 11 } } },
+                tooltip: {
+                  callbacks: {
+                    afterBody: function(items) {
+                      const i = items[0].dataIndex;
+                      const d = data[i];
+                      return [
+                        `d+: ${d.d_plus.toFixed(2)}`,
+                        `d-: ${d.d_minus.toFixed(2)}`,
+                        `${Alpine.store('i18n').t('deviation.label')} ${d.deviation.toFixed(2)}`,
+                      ];
+                    },
+                  },
+                },
+              },
+              scales: {
+                y: { beginAtZero: true, title: { display: true, text: Alpine.store('i18n').t('chart.value') } },
+              },
+            }),
+          });
+        },
+
+        clearTable() {
+          this.error = '';
+          this.result = null;
+
+          if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+          this.numCols = 3;
+          this.rows = [];
+          this.addRow();
+          this.addRow();
+          this.addRow();
+        },
+
+        init() {
+          this.addRow();
+          this.addRow();
+          this.addRow();
+        },
+      };
+    }
+  </script>
+</body>
+</html>
+
+

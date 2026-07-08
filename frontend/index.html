@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operations Research Solver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>document.documentElement.classList.add('dark');</script>
+  <link href="/css/tailwind.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+  <script src="js/api.js"></script>
+  <script src="js/cache.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/utils.js"></script>
+</head>
+  <body class="bg-zinc-50 dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 min-h-screen font-['JetBrains_Mono','monospace']" x-data="landingPage()">
+  <nav class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md text-zinc-900 dark:text-zinc-100 shadow-lg border-b border-zinc-200 dark:border-zinc-700/50">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/" class="text-xl font-bold tracking-tight" x-text="$store.i18n.t('site.title')">OR Solver</a>
+      <div class="flex items-center gap-3">
+        <span class="flex items-center gap-1 text-xs font-medium">
+          <a href="#" @click.prevent="$store.i18n.toggle()" x-text="$store.i18n.lang === 'en' ? '[en]' : 'en'" class="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors" :class="$store.i18n.lang === 'en' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'"></a>
+          <span class="text-zinc-300 dark:text-zinc-600">/</span>
+          <a href="#" @click.prevent="$store.i18n.toggle()" x-text="$store.i18n.lang === 'es' ? '[es]' : 'es'" class="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors" :class="$store.i18n.lang === 'es' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'"></a>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-4 py-12">
+    <section class="text-center mb-16">
+
+      <h1 class="text-5xl font-bold text-slate-900 dark:text-slate-50 mb-4 tracking-tight" x-html="$store.i18n.t('index.hero.title')"></h1>
+      <p class="text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto leading-relaxed" x-text="$store.i18n.t('index.hero.desc')"></p>
+    </section>
+
+    <section class="mb-16">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        <div class="text-center">
+          <div class="w-12 h-12 mx-auto mb-3 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
+            <svg class="w-6 h-6 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+          </div>
+          <h3 class="font-semibold text-zinc-800 dark:text-zinc-200 mb-1" x-text="$store.i18n.t('index.feature.steps')"></h3>
+          <p class="text-sm text-zinc-500 dark:text-zinc-400" x-text="$store.i18n.t('index.feature.steps.desc')"></p>
+        </div>
+        <div class="text-center">
+          <div class="w-12 h-12 mx-auto mb-3 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
+            <svg class="w-6 h-6 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+          </div>
+          <h3 class="font-semibold text-zinc-800 dark:text-zinc-200 mb-1" x-text="$store.i18n.t('index.feature.viz')"></h3>
+          <p class="text-sm text-zinc-500 dark:text-zinc-400" x-text="$store.i18n.t('index.feature.viz.desc')"></p>
+        </div>
+        <div class="text-center">
+          <div class="w-12 h-12 mx-auto mb-3 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center">
+            <svg class="w-6 h-6 text-zinc-600 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          </div>
+          <h3 class="font-semibold text-zinc-800 dark:text-zinc-200 mb-1" x-text="$store.i18n.t('index.feature.export')"></h3>
+          <p class="text-sm text-zinc-500 dark:text-zinc-400" x-text="$store.i18n.t('index.feature.export.desc')"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mb-6" x-text="$store.i18n.t('index.methods')"></h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <template x-for="card in cards" :key="card.href">
+          <a :href="card.href" class="flex flex-col bg-white dark:bg-zinc-800/50 rounded-lg shadow-sm dark:shadow-zinc-950/20 transition-all border border-zinc-200 dark:border-zinc-700/50 p-6 group hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-md">
+            <h3 class="text-lg font-bold text-zinc-800 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" x-text="$store.i18n.t(card.titleKey)"></h3>
+            <p class="flex-1 text-sm text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed" x-text="$store.i18n.t(card.descKey)"></p>
+            <span class="inline-flex items-center gap-1 mt-4 text-xs font-medium text-indigo-600 dark:text-indigo-400 group-hover:gap-2 transition-all" x-text="$store.i18n.t('index.open')">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </span>
+          </a>
+        </template>
+      </div>
+    </section>
+  </main>
+
+  <footer class="text-center text-xs text-zinc-400 dark:text-zinc-500 py-8 mt-12 border-t border-zinc-200 dark:border-zinc-700/50">
+    <p x-text="$store.i18n.t('footer.text')"></p>
+    <p class="mt-1" x-text="$store.i18n.t('footer.source')"></p>
+  </footer>
+
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.store('dark', document.documentElement.classList.contains('dark'));
+    });
+
+    function landingPage() {
+      const store = Alpine.store('i18n');
+      if (store && store.init) store.init();
+      return {
+        cards: [
+          { titleKey: 'index.card.lp', href: 'linear-programming', descKey: 'index.card.lp.desc' },
+          { titleKey: 'index.card.ip', href: 'integer-programming', descKey: 'index.card.ip.desc' },
+          { titleKey: 'index.card.transport', href: 'transportation', descKey: 'index.card.transport.desc' },
+          { titleKey: 'index.card.goal', href: 'goal-programming', descKey: 'index.card.goal.desc' },
+          { titleKey: 'index.card.assignment', href: 'assignment', descKey: 'index.card.assignment.desc' },
+        ],
+      };
+    }
+  </script>
+</body>
+</html>

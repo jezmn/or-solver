@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRAN - OR Solver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>document.documentElement.classList.add('dark');</script>
+  <link href="/css/tailwind.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+  <script src="js/api.js"></script>
+  <script src="js/cache.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/table-input.js"></script>
+  <script src="js/problem-io.js"></script>
+  <style>[x-cloak] { display: none !important; }
+* { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+*::-webkit-scrollbar { width: 5px; height: 5px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+*::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.dark * { scrollbar-color: #475569 transparent; }
+.dark *::-webkit-scrollbar-thumb { background: #475569; }
+.dark *::-webkit-scrollbar-thumb:hover { background: #64748b; }</style>
+</head>
+<body class="bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 min-h-screen font-['JetBrains_Mono','monospace']" x-cloak x-data="transportPage()">
+  <nav class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md text-zinc-900 dark:text-zinc-100 shadow-lg border-b border-zinc-200 dark:border-zinc-700/50">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/" class="text-xl font-bold tracking-tight" x-text="$store.i18n.t('site.title')">OR Solver</a>
+      <div class="flex items-center gap-3">
+        <span class="flex items-center gap-1 text-xs font-medium">
+          <a href="#" @click.prevent="$store.i18n.toggle()" x-text="$store.i18n.lang === 'en' ? '[en]' : 'en'" class="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors" :class="$store.i18n.lang === 'en' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'"></a>
+          <span class="text-zinc-300 dark:text-zinc-600">/</span>
+          <a href="#" @click.prevent="$store.i18n.toggle()" x-text="$store.i18n.lang === 'es' ? '[es]' : 'es'" class="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors" :class="$store.i18n.lang === 'es' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'"></a>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.store('dark', document.documentElement.classList.contains('dark'));
+    });
+  </script>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <div class="flex items-center gap-2 mb-6">
+      <a href="/" class="text-sm text-zinc-600 dark:text-zinc-400 hover:underline" x-text="$store.i18n.t('back')">← Back</a>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-zinc-50" x-text="$store.i18n.t('transport.page.title')">Transportation Problem</h1>
+    </div>
+
+    <div x-show="error" x-text="error" class="bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm mb-4"></div>
+
+    <div class="max-w-5xl mx-auto space-y-6">
+      <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 class="text-lg font-bold" x-text="$store.i18n.t('transport.table')">Transportation Table</h2>
+          <div data-problem-io-controls class="flex items-center gap-2">
+            <button type="button" @click="exportProblem()" class="text-xs bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 px-3 py-1.5 rounded hover:bg-zinc-300 dark:hover:bg-zinc-600 transition" x-text="$store.i18n.t('export')">Export</button>
+            <label class="text-xs bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 px-3 py-1.5 rounded hover:bg-zinc-300 dark:hover:bg-zinc-600 transition cursor-pointer">
+              <span x-text="$store.i18n.t('import')">Import</span>
+              <input type="file" accept="application/json,.json" @change="importProblem($event)" class="sr-only dark:text-zinc-100 dark:placeholder-zinc-500">
+            </label>
+          </div>
+        </div>
+        <div class="space-y-4" @input="onInputChange()">
+          <div class="flex-1">
+            <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1" x-text="$store.i18n.t('method')">Method</label>
+            <div x-data="{ open: false }" class="relative">
+              <button type="button" @click="open = !open" @keydown.escape="open = false"
+                class="w-full flex items-center justify-between gap-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/60 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-100 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors">
+                <span x-text="method === 'vogel' ? $store.i18n.t('vogel.method') : $store.i18n.t('northwest.method')"></span>
+                <svg :class="{ 'rotate-180': open }" class="w-4 h-4 transition-transform text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </button>
+              <div x-show="open" @click.away="open = false"
+                class="absolute z-50 mt-1 w-full rounded-lg border border-zinc-200 dark:border-zinc-700/50 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
+                <button @click="method = 'vogel'; open = false"
+                  class="w-full text-left px-3 py-2 text-sm transition-colors"
+                  :class="method === 'vogel' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'" x-text="$store.i18n.t('vogel.method')">
+                </button>
+                <button @click="method = 'northwest-corner'; open = false"
+                  class="w-full text-left px-3 py-2 text-sm transition-colors"
+                  :class="method === 'northwest-corner' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'" x-text="$store.i18n.t('northwest.method')">
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300" x-text="$store.i18n.t('variable')">Variables</label>
+              <div class="flex gap-1">
+                <button @click="addCol()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-text="$store.i18n.t('add.variable')">+ Variable</button>
+                <button @click="removeCol()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-show="numCols > 1" x-text="$store.i18n.t('remove.variable')">− Variable</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-700">
+            <table class="w-full text-xs border-collapse bg-white dark:bg-zinc-800">
+              <thead>
+                <tr class="bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200">
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24" x-text="$store.i18n.t('source.dest.header')">Source \ Dest</th>
+                  <template x-for="(_, j) in Array(numCols).fill()" :key="j">
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium w-20 min-w-[80px]">
+                      <input type="text" x-model="destNames[j]" class="w-full px-1 py-1 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded" placeholder="D">
+                    </th>
+                  </template>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('supply')">Supply</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(_, i) in Array(numRows).fill()" :key="i">
+                  <tr>
+                    <td class="border border-slate-300 dark:border-zinc-700 p-0 bg-slate-50 dark:bg-zinc-800/70">
+                      <input type="text" x-model="sourceNames[i]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded" placeholder="S">
+                    </td>
+                    <template x-for="(_, j) in Array(numCols).fill()" :key="j">
+                      <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                        <input type="text" x-model="costs[i][j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                      </td>
+                    </template>
+                    <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                      <input type="text" x-model="supply[i]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                    </td>
+                  </tr>
+                </template>
+                <tr class="bg-slate-50 dark:bg-zinc-800/70">
+                  <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-500 dark:text-zinc-300" x-text="$store.i18n.t('demand')">Demand</td>
+                  <template x-for="(_, j) in Array(numCols).fill()" :key="j">
+                    <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                      <input type="text" x-model="demand[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                    </td>
+                  </template>
+                  <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex gap-2">
+            <button @click="addRow()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-3 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-text="$store.i18n.t('add.constraint')">+ Constraint</button>
+            <button @click="removeRow()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-3 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-show="numRows > 1" x-text="$store.i18n.t('remove.constraint')">− Constraint</button>
+          </div>
+
+          <div class="flex gap-2">
+            <button @click="clearTable()" class="flex-1 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-semibold py-2 rounded-lg transition text-sm" x-text="$store.i18n.t('clear.table')">Clear table</button>
+            <button @click="solve()" class="flex-1 bg-zinc-800 dark:bg-zinc-200 hover:bg-zinc-700 dark:hover:bg-zinc-300 text-white dark:text-zinc-900 font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2" :disabled="loading">
+            <span x-show="loading">
+              <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            </span>
+            <span x-text="loading ? $store.i18n.t('solving') : $store.i18n.t('solve')"></span>
+          </button>
+          </div>
+        </div>
+      </div>
+
+      <div x-show="!result" class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6 flex flex-col items-center justify-center text-center min-h-[300px]">
+        <svg class="w-16 h-16 text-slate-300 dark:text-zinc-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        <h3 class="text-lg font-semibold text-slate-400 dark:text-zinc-500 mb-2" x-text="$store.i18n.t('waiting.title')">Waiting for Solution</h3>
+        <p class="text-sm text-slate-400 dark:text-zinc-500 max-w-xs" x-html="$store.i18n.t('waiting.full')"></p>
+      </div>
+      <div class="space-y-4" x-show="result">
+        <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold" x-text="$store.i18n.t('solution')">Solution</h2>
+          </div>
+          <div x-show="result?.status && result.status !== 'optimal'" x-html="result?.status ? renderSolverStatusBlock(result.status, result) : ''"></div>
+          <div x-show="!result?.status || result?.status === 'optimal'" class="space-y-2 text-sm">
+            <p><span class="font-semibold" x-text="$store.i18n.t('total.cost')">Total Cost:</span> <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400" x-text="formatNumber(result?.solution?.total_cost)"></span></p>
+            <div class="mt-2">
+              <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('optimal.allocation')">Optimal Allocation</h4>
+              <div x-html="result?.solution?.allocation && result?.solution?.costs ? renderMatrixWithCosts(result.solution.costs, result.solution.allocation) : (result?.solution?.allocation ? renderMatrix(result.solution.allocation) : '')"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="result?.steps?.length">
+          <h2 class="text-lg font-bold mb-3" x-text="$store.i18n.t('steps')">Steps</h2>
+          <div id="steps-container" x-html="result?.steps?.length ? renderSteps(result.steps) : ''"></div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function transportPage() {
+      return {
+        method: 'vogel',
+        numRows: 3,
+        numCols: 2,
+        supply: ['', '', ''],
+        demand: ['', ''],
+        costs: [['', ''], ['', ''], ['', '']],
+        sourceNames: ['Source 1', 'Source 2', 'Source 3'],
+        destNames: ['Destination 1', 'Destination 2'],
+        loading: false,
+        result: null,
+        error: '',
+
+        getProblemInput() {
+          return getTransportationProblemInput(this);
+        },
+
+        exportProblem() {
+          this.error = '';
+          try {
+            downloadProblemJson(this.method, this.getProblemInput());
+          } catch (e) {
+            this.error = e.message || 'Export failed.';
+          }
+        },
+
+        onInputChange() {
+          this.result = null;
+          this.error = '';
+        },
+
+        async importProblem(event) {
+          this.error = '';
+          try {
+            const input = await importProblemFromFile(event, null, validateTransportationProblemInput);
+            if (!input) return;
+            applyTransportationProblemInput(this, input);
+            this.result = null;
+          } catch (e) {
+            this.error = e.message || 'Import failed.';
+          }
+        },
+
+        addRow() {
+          this.supply.push('');
+          this.costs.push(Array(this.numCols).fill(''));
+          this.sourceNames.push('Source ' + (this.numRows + 1));
+          this.numRows = this.supply.length;
+        },
+        removeRow() {
+          if (this.numRows > 1) {
+            this.supply.pop();
+            this.costs.pop();
+            this.sourceNames.pop();
+            this.numRows = this.supply.length;
+          }
+        },
+        addCol() {
+          this.demand.push('');
+          for (const row of this.costs) row.push('');
+          this.destNames.push('Destination ' + (this.numCols + 1));
+          this.numCols = this.demand.length;
+        },
+        removeCol() {
+          if (this.numCols > 1) {
+            this.demand.pop();
+            for (const row of this.costs) row.pop();
+            this.destNames.pop();
+            this.numCols = this.demand.length;
+          }
+        },
+
+        async solve() {
+          this.error = '';
+          this.result = null;
+
+          const supply = this.supply.map(Number);
+          const demand = this.demand.map(Number);
+          if (supply.some(isNaN) || demand.some(isNaN)) { this.error = 'Supply and demand must be numeric.'; return; }
+
+          const costRows = this.costs.map(r => r.map(Number));
+          for (const row of costRows) { if (row.some(isNaN)) { this.error = 'Cost matrix values must be numeric.'; return; } }
+
+          const input = { supply, demand, costs: costRows };
+          const cacheKey = getCacheKey(this.method, input);
+          const cached = getFromCache(cacheKey);
+          if (cached) { this.result = cached.result; return; }
+
+          this.loading = true;
+          try {
+            const data = await solve(this.method, input);
+            this.result = data;
+            setCache(cacheKey, data);
+          } catch (e) { this.error = e.message || 'API error'; } finally { this.loading = false; }
+        },
+
+        clearTable() {
+          this.error = '';
+          this.result = null;
+
+          const t = createTransportTableState(this.numRows, this.numCols);
+          this.supply = t.supply;
+          this.demand = t.demand;
+          this.costs = t.costs;
+          this.sourceNames = t.supply.map((_, i) => 'Source ' + (i + 1));
+          this.destNames = t.demand.map((_, j) => 'Destination ' + (j + 1));
+          this.numRows = this.supply.length;
+          this.numCols = this.demand.length;
+        },
+
+        init() {
+          const t = createTransportTableState(3, 2);
+          this.supply = t.supply;
+          this.demand = t.demand;
+          this.costs = t.costs;
+          this.sourceNames = ['Source 1', 'Source 2', 'Source 3'];
+          this.destNames = ['Destination 1', 'Destination 2'];
+          this.numRows = this.supply.length;
+          this.numCols = this.demand.length;
+        },
+      };
+    }
+  </script>
+</body>
+</html>

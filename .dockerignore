@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.env
+.git
+.gitignore
+.github/
+.ruff_cache/
+Dockerfile
+docker-compose.yml
+.env.example
+.dockerignore
+README.md
+node_modules/
+frontend/css/tailwind.css

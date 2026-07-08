@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LP - OR Solver</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>document.documentElement.classList.add('dark');</script>
+  <link href="/css/tailwind.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js" defer></script>
+  <script src="js/api.js"></script>
+  <script src="js/cache.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/table-input.js"></script>
+  <script src="js/problem-io.js"></script>
+  <style>[x-cloak] { display: none !important; }
+* { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+*::-webkit-scrollbar { width: 5px; height: 5px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+*::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.dark * { scrollbar-color: #475569 transparent; }
+.dark *::-webkit-scrollbar-thumb { background: #475569; }
+.dark *::-webkit-scrollbar-thumb:hover { background: #64748b; }</style>
+</head>
+<body class="bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 min-h-screen font-['JetBrains_Mono','monospace']" x-cloak x-data="lpPage()">
+  <nav class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md text-zinc-900 dark:text-zinc-100 shadow-lg border-b border-zinc-200 dark:border-zinc-700/50">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/" class="text-xl font-bold tracking-tight" x-text="$store.i18n.t('site.title')">OR Solver</a>
+      <div class="flex items-center gap-3">
+        <span class="flex items-center gap-1 text-xs font-medium">
+          <a href="#" @click.prevent="$store.i18n.toggle()" x-text="$store.i18n.lang === 'en' ? '[en]' : 'en'" class="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors" :class="$store.i18n.lang === 'en' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'"></a>
+          <span class="text-zinc-300 dark:text-zinc-600">/</span>
+          <a href="#" @click.prevent="$store.i18n.toggle()" x-text="$store.i18n.lang === 'es' ? '[es]' : 'es'" class="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors" :class="$store.i18n.lang === 'es' ? 'text-zinc-800 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500'"></a>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.store('dark', document.documentElement.classList.contains('dark'));
+    });
+  </script>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <div class="flex items-center gap-2 mb-6">
+      <a href="/" class="text-sm text-zinc-600 dark:text-zinc-400 hover:underline" x-text="$store.i18n.t('back')">← Back</a>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-zinc-50" x-text="$store.i18n.t('lp.page.title')"></h1>
+    </div>
+
+    <div x-show="error" x-text="error" class="bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm mb-4"></div>
+
+    <div class="max-w-5xl mx-auto space-y-6">
+      <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 class="text-lg font-bold" x-text="$store.i18n.t('problem.input')"></h2>
+          <div data-problem-io-controls class="flex items-center gap-2">
+            <button type="button" @click="exportProblem()" class="text-xs bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 px-3 py-1.5 rounded hover:bg-zinc-300 dark:hover:bg-zinc-600 transition" x-text="$store.i18n.t('export')"></button>
+<label class="text-xs bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 px-3 py-1.5 rounded hover:bg-zinc-300 dark:hover:bg-zinc-600 transition cursor-pointer">
+              <span x-text="$store.i18n.t('import')">Import</span>
+              <input type="file" accept="application/json,.json" @change="importProblem($event)" class="sr-only dark:text-zinc-100 dark:placeholder-zinc-500">
+            </label>
+          </div>
+        </div>
+        <div class="space-y-4" @input="onInputChange()">
+          <div class="flex gap-4">
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1" x-text="$store.i18n.t('optimization')"></label>
+              <div x-data="{ open: false }" class="relative">
+                <button type="button" @click="open = !open" @keydown.escape="open = false"
+                  class="w-full flex items-center justify-between gap-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/60 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-100 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors">
+                  <span x-text="optimization === 'max' ? $store.i18n.t('maximize') : $store.i18n.t('minimize')"></span>
+                  <svg :class="{ 'rotate-180': open }" class="w-4 h-4 transition-transform text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div x-show="open" @click.away="open = false"
+                  class="absolute z-50 mt-1 w-full rounded-lg border border-zinc-200 dark:border-zinc-700/50 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
+<button @click="optimization = 'max'; open = false"
+                    class="w-full text-left px-3 py-2 text-sm transition-colors"
+                    :class="optimization === 'max' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'">
+                    <span x-text="$store.i18n.t('maximize')"></span>
+                  </button>
+                  <button @click="optimization = 'min'; open = false"
+                    class="w-full text-left px-3 py-2 text-sm transition-colors"
+                    :class="optimization === 'min' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'">
+                    <span x-text="$store.i18n.t('minimize')"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1" x-text="$store.i18n.t('method')"></label>
+              <div class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/60 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-100" x-text="$store.i18n.t('simplex.method')">
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300" x-text="$store.i18n.t('variable')"></label>
+              <div class="flex gap-1">
+                <button @click="table.addCol()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-text="$store.i18n.t('add.variable')"></button>
+                <button @click="table.removeCol()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-show="table.numCols > 1" x-text="$store.i18n.t('remove.variable')"></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-700">
+            <table class="w-full text-xs border-collapse bg-white dark:bg-zinc-800">
+              <thead>
+                <tr class="bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200">
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-44" x-text="$store.i18n.t('name')"></th>
+                  <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-mono font-medium text-slate-600 dark:text-zinc-300 w-24 min-w-[96px]">
+                      <input type="text" x-model="table.varNames[j]" class="w-full px-1 py-1 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded" placeholder="x">
+                    </th>
+                  </template>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-16" x-text="$store.i18n.t('sign')"></th>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24" x-text="$store.i18n.t('rhs')"></th>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-48" x-text="$store.i18n.t('equation')"></th>
+                </tr>
+
+              </thead>
+              <tbody>
+                <tr class="bg-indigo-50 dark:bg-indigo-950/40 text-slate-800 dark:text-zinc-100">
+                  <td class="border border-slate-300 dark:border-zinc-700 p-0 text-center text-slate-500 dark:text-zinc-400 text-xs bg-indigo-50 dark:bg-indigo-950/40 font-medium" x-text="$store.i18n.t('objective.row')"></td>
+                  <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
+                    <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                      <input type="text" x-model="table.rows[0].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-indigo-100 dark:focus:bg-indigo-950/60 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                    </td>
+                  </template>
+                  <td class="border border-slate-300 dark:border-zinc-700 p-0 text-center text-slate-500 dark:text-zinc-400 text-xs bg-indigo-50 dark:bg-indigo-950/40" x-text="$store.i18n.t('objective.label')"></td>
+                  <td class="border border-slate-300 dark:border-zinc-700 p-0 text-center text-slate-500 dark:text-zinc-400 text-xs bg-indigo-50 dark:bg-indigo-950/40">—</td>
+                  <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center text-xs font-mono text-slate-500 dark:text-zinc-400 bg-indigo-50 dark:bg-indigo-950/40" x-text="formatObjectiveEquation(optimization, table.rows[0].cells, table.varNames)"></td>
+                </tr>
+                <template x-for="(row, i) in table.rows.slice(1)" :key="i">
+                  <tr>
+                    <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                      <input type="text" x-model="row.label" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 text-xs focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400" placeholder="c">
+                    </td>
+                    <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
+                      <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                        <input type="text" x-model="table.rows[i + 1].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                      </td>
+                    </template>
+                    <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                      <select x-model="table.rows[i + 1].sign" class="w-full px-1 py-1.5 text-center bg-white/70 dark:bg-zinc-900/60 border-0 outline-none text-xs text-slate-800 dark:text-zinc-100 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500">
+                        <option value="<=">≤</option>
+                        <option value="=">=</option>
+                        <option value=">=">≥</option>
+                      </select>
+                    </td>
+                    <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                      <input type="text" x-model="table.rows[i + 1].rhs" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                    </td>
+                    <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center text-xs font-mono text-slate-500 dark:text-zinc-400" x-text="formatEquation(row)"></td>
+                  </tr>
+                </template>
+                <tr x-show="result && result.status === 'optimal'" class="bg-zinc-100 dark:bg-zinc-800/60 text-zinc-800 dark:text-zinc-100">
+                  <td class="border border-slate-300 dark:border-zinc-700 p-0 text-center text-xs font-medium bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400" x-text="$store.i18n.t('solution.row')"></td>
+                  <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
+                    <td class="border border-slate-300 dark:border-zinc-700 p-0">
+                      <input type="text" :value="(result?.solution?.variables ?? {})['x' + (j + 1)]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:bg-zinc-200 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-zinc-400 dark:focus:ring-zinc-500" disabled>
+                    </td>
+                  </template>
+                  <td class="border border-slate-300 dark:border-zinc-700 p-0 text-center text-zinc-500 dark:text-zinc-400 text-xs bg-zinc-100 dark:bg-zinc-800/60">—</td>
+                  <td class="border border-slate-300 dark:border-zinc-700 p-0 text-center font-mono text-xs font-bold bg-zinc-100 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-300" x-text="formatNumber(result?.solution?.optimal_value)"></td>
+                  <td class="border border-slate-300 dark:border-zinc-700 p-0 bg-zinc-100 dark:bg-zinc-800/60"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex gap-2">
+            <button @click="table.addRow()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-3 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-text="$store.i18n.t('add.constraint')"></button>
+            <button @click="table.removeRow()" class="text-xs border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 px-3 py-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition" x-show="table.numRows > 1" x-text="$store.i18n.t('remove.constraint')"></button>
+          </div>
+
+          <div class="flex gap-2">
+            <button @click="clearTable()" class="flex-1 border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-semibold py-2 rounded-lg transition text-sm" x-text="$store.i18n.t('clear.table')"></button>
+            <button @click="solve()" class="flex-1 bg-zinc-800 dark:bg-zinc-200 hover:bg-zinc-700 dark:hover:bg-zinc-300 text-white dark:text-zinc-900 font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2" :disabled="loading">
+            <span x-show="loading">
+              <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            </span>
+            <span x-text="loading ? $store.i18n.t('solving') : $store.i18n.t('solve')"></span>
+          </button>
+          </div>
+        </div>
+      </div>
+
+      <div x-show="!result" class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6 flex flex-col items-center justify-center text-center min-h-[300px]">
+        <svg class="w-16 h-16 text-slate-300 dark:text-zinc-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        <h3 class="text-lg font-semibold text-slate-400 dark:text-zinc-500 mb-2" x-text="$store.i18n.t('waiting.title')"></h3>
+        <p class="text-sm text-slate-400 dark:text-zinc-500 max-w-xs" x-text="$store.i18n.t('waiting.desc')"></p>
+      </div>
+      <div class="space-y-4" x-show="result">
+        <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold" x-text="$store.i18n.t('solution')"></h2>
+          </div>
+          <div x-show="result?.status === 'optimal'" class="space-y-2 text-sm">
+            <p><span class="font-semibold" x-text="$store.i18n.t('status')"></span> <span class="text-emerald-600 dark:text-emerald-400" x-text="$store.i18n.t('optimal')"></span></p>
+            <p><span class="font-semibold" x-text="$store.i18n.t('optimal.value')"></span> <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400" x-text="formatNumber(result?.solution?.optimal_value)"></span></p>
+
+            <div class="mt-2">
+              <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('decision.variables')"></h4>
+              <template x-for="(v, name) in (result?.solution?.variables ?? {})" :key="name">
+                <div class="flex justify-between text-xs border-b border-slate-100 dark:border-zinc-700 py-1">
+                  <span class="font-mono" x-text="formatVariableName(name)"></span>
+                  <span class="font-mono" x-text="formatNumber(v)"></span>
+                </div>
+              </template>
+            </div>
+
+            <div class="mt-3" x-show="result?.solution?.constraint_analysis?.length">
+              <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('constraints.dual.values')"></h4>
+              <div class="overflow-x-auto rounded border border-slate-200 dark:border-zinc-700">
+                <table class="w-full text-xs border-collapse">
+                  <thead class="bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200">
+                    <tr>
+                      <th class="border border-slate-200 dark:border-zinc-700 px-2 py-1 text-left" x-text="$store.i18n.t('constraint')"></th>
+                      <th class="border border-slate-200 dark:border-zinc-700 px-2 py-1 text-right" x-text="$store.i18n.t('slack')"></th>
+                      <th class="border border-slate-200 dark:border-zinc-700 px-2 py-1 text-right" x-text="$store.i18n.t('dual.value')"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="row in (result?.solution?.constraint_analysis ?? [])" :key="row.constraint">
+                      <tr>
+                        <td class="border border-slate-200 dark:border-zinc-700 px-2 py-1 font-mono" x-text="row.constraint"></td>
+                        <td class="border border-slate-200 dark:border-zinc-700 px-2 py-1 text-right font-mono" x-text="formatNumber(row.slack)"></td>
+                        <td class="border border-slate-200 dark:border-zinc-700 px-2 py-1 text-right font-mono" x-text="formatNumber(row.dual_value)"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="mt-3" x-show="result?.solution?.reduced_costs?.length">
+              <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('reduced.costs')"></h4>
+              <template x-for="rc in (result?.solution?.reduced_costs ?? [])" :key="rc.variable">
+                <div class="flex justify-between text-xs border-b border-slate-100 dark:border-zinc-700 py-1"><span class="font-mono" x-text="rc.variable"></span><span class="font-mono" x-text="formatNumber(rc.value)"></span></div>
+              </template>
+            </div>
+
+            <details class="mt-3 rounded border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-950/30" x-show="result?.solution?.dual_formulation">
+              <summary class="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700 dark:text-zinc-200" x-text="$store.i18n.t('show.dual.formulation')"></summary>
+              <div class="px-3 pb-3 text-xs text-slate-700 dark:text-zinc-300" x-html="renderDualFormulation(result.solution.dual_formulation)"></div>
+            </details>
+          </div>
+          <div x-show="result?.status && result.status !== 'optimal'" x-html="result?.status ? renderSolverStatusBlock(result.status, result) : ''"></div>
+        </div>
+
+        <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="result?.steps?.length">
+          <h2 class="text-lg font-bold mb-3" x-text="$store.i18n.t('steps')"></h2>
+          <div id="steps-container" x-html="result?.steps?.length ? renderSteps(result.steps) : ''"></div>
+        </div>
+
+        <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="result?.graph?.type === 'chart' && result?.graph?.data?.boundary_lines">
+          <h2 class="text-lg font-bold mb-3" x-text="$store.i18n.t('feasible.region')"></h2>
+          <canvas id="graph-canvas"></canvas>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function lpPage() {
+      return {
+        optimization: 'max',
+        table: null,
+        loading: false,
+        result: null,
+        error: '',
+        chartInstance: null,
+
+        formatLinearExpression(variables, coefficients) {
+          return formatLinearExpressionText(coefficients, variables);
+        },
+
+        renderDualFormulation(formulation) {
+          if (!formulation) return '';
+          const vars = formulation.variables || [];
+          const objective = this.formatLinearExpression(vars.map(v => v.name), vars.map(v => v.objective_coefficient));
+          let html = `<p class="font-semibold mb-2">${formulation.direction === 'min' ? 'Minimize' : 'Maximize'} W = ${escHtml(objective)}</p>`;
+          html += '<div class="space-y-1">';
+          (formulation.constraints || []).forEach(row => {
+            const expr = this.formatLinearExpression(row.variables, row.coefficients);
+            html += `<div><span class="font-mono">${escHtml(formatMathText(row.name))}:</span> ${escHtml(expr)} ${escHtml(row.sign)} ${escHtml(formatNumber(row.rhs))}</div>`;
+          });
+          html += '</div>';
+          if (vars.length) {
+            html += '<div class="mt-2 text-slate-500 dark:text-zinc-400">' + vars.map(v => `${escHtml(formatVariableName(v.name))} ${escHtml(v.sign)}`).join(', ') + '</div>';
+          }
+          return html;
+        },
+        formatEquation(row) {
+          return formatConstraintEquation(row, this.table.varNames);
+        },
+
+        getProblemInput() {
+          return getLpProblemInput(this.table, this.optimization);
+        },
+
+        exportProblem() {
+          this.error = '';
+          try {
+            downloadProblemJson('simplex', this.getProblemInput());
+          } catch (e) {
+            this.error = e.message || 'Export failed.';
+          }
+        },
+
+        onInputChange() {
+          this.result = null;
+
+          this.error = '';
+          if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+        },
+
+        async importProblem(event) {
+          this.error = '';
+          try {
+            const input = await importProblemFromFile(event, 'simplex', validateLpProblemInput);
+            if (!input) return;
+            applyLpProblemInput(this.table, input);
+            this.optimization = input.optimization;
+            this.result = null;
+
+            if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+          } catch (e) {
+            this.error = e.message || 'Import failed.';
+          }
+        },
+
+        async solve() {
+          this.error = '';
+          this.result = null;
+
+          if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+
+          const vals = this.table.getAllValues();
+          const objective = vals[0].cells;
+          if (objective.some(isNaN)) { this.error = 'Objective coefficients must be numeric.'; return; }
+
+          const constraints = [];
+          const signs = [];
+          const rhs = [];
+          for (let i = 1; i < vals.length; i++) {
+            const r = vals[i];
+            const coeffs = r.cells;
+            if (coeffs.some(isNaN) || isNaN(r.rhs)) { this.error = 'All constraint values must be numeric.'; return; }
+            constraints.push(coeffs);
+            signs.push(r.sign);
+            rhs.push(r.rhs);
+          }
+          if (constraints.length === 0) { this.error = 'Add at least one constraint.'; return; }
+
+          const input = { objective, constraints, signs, rhs, optimization: this.optimization };
+
+          const cacheKey = getCacheKey('simplex', input);
+          const cached = getFromCache(cacheKey);
+          if (cached) {
+            this.result = cached.result;
+
+            this.$nextTick(() => { this.renderGraph(); });
+            return;
+          }
+
+          this.loading = true;
+          try {
+            const data = await solve('simplex', input);
+            this.result = data;
+            setCache(cacheKey, data);
+            this.$nextTick(() => { this.renderGraph(); });
+          } catch (e) {
+            this.error = e.message || 'API error';
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        renderGraph() {
+          this.renderFeasibleRegion();
+        },
+
+        renderFeasibleRegion() {
+          const canvas = document.getElementById('graph-canvas');
+          if (!canvas || !this.result || !this.result.graph || !this.result.graph.data || !this.result.graph.data.boundary_lines) return;
+          if (this.chartInstance) this.chartInstance.destroy();
+          const ctx = canvas.getContext('2d');
+          const gData = this.result.graph.data;
+          const palette = getChartPalette();
+          const datasets = gData.boundary_lines.map((line, i) => ({
+            label: line.label,
+            data: line.x.map((_, idx) => ({ x: line.x[idx], y: line.y[idx] })),
+            borderColor: palette[i % palette.length],
+            borderWidth: 1.5, pointRadius: 0, showLine: true,
+          }));
+          if (gData.feasible_region && gData.feasible_region.x && gData.feasible_region.x.length) {
+            datasets.push({
+              label: 'Feasible Area',
+              data: gData.feasible_region.x.map((_, idx) => ({ x: gData.feasible_region.x[idx], y: gData.feasible_region.y[idx] })),
+              backgroundColor: 'rgba(99, 102, 241, 0.12)',
+              borderColor: 'rgba(99, 102, 241, 0.4)',
+              borderWidth: 0.5,
+              pointRadius: 0,
+              fill: 'shape',
+              showLine: true,
+              order: 0,
+            });
+          }
+          if (gData.isoprofit_line) {
+            datasets.push({
+              label: 'Isoprofit Line',
+              data: gData.isoprofit_line.x.map((_, idx) => ({ x: gData.isoprofit_line.x[idx], y: gData.isoprofit_line.y[idx] })),
+              borderColor: 'rgba(239, 68, 68, 0.5)',
+              borderWidth: 1,
+              borderDash: [5, 5],
+              pointRadius: 0,
+              showLine: true,
+              order: 0,
+            });
+          }
+          if (gData.solution_point) {
+            datasets.push({
+              label: 'Optimal Feasible Point',
+              data: [{ x: gData.solution_point.x1 ?? 0, y: gData.solution_point.x2 ?? 0 }],
+              borderColor: palette[1], backgroundColor: palette[1], pointRadius: 6, pointStyle: 'rectRot', showLine: false,
+            });
+          }
+          const chartOpts = getChartOptions({
+            plugins: { legend: { labels: { font: { size: 11 } } } },
+            scales: {
+              x: { type: 'linear', position: 'bottom', title: { display: true, text: 'x\u2081' } },
+              y: { title: { display: true, text: 'x\u2082' } },
+            },
+          });
+          if (gData.x_bounds) {
+            chartOpts.scales.x.min = gData.x_bounds[0];
+            chartOpts.scales.x.max = gData.x_bounds[1];
+          }
+          if (gData.y_bounds) {
+            chartOpts.scales.y.min = gData.y_bounds[0];
+            chartOpts.scales.y.max = gData.y_bounds[1];
+          }
+          this.chartInstance = new Chart(ctx, {
+            type: 'scatter',
+            data: { datasets },
+            options: chartOpts,
+          });
+        },
+
+        clearTable() {
+          this.error = '';
+          this.result = null;
+
+          if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+          this.table = createTableState(3, 2, { labels: true });
+          for (let i = 1; i < this.table.rows.length; i++) this.table.rows[i].label = 'Constraint ' + i;
+          this._wrapAddRow();
+        },
+
+        init() {
+          this.table = createTableState(3, 2, { labels: true });
+          for (let i = 1; i < this.table.rows.length; i++) this.table.rows[i].label = 'Constraint ' + i;
+          this._wrapAddRow();
+        },
+
+        _wrapAddRow() {
+          const orig = this.table.addRow.bind(this.table);
+          const self = this;
+          this.table.addRow = function () {
+            orig();
+            self.table.rows[self.table.rows.length - 1].label = 'Constraint ' + (self.table.rows.length - 1);
+          };
+        },
+      };
+    }
+    </script>
+</body>
+</html>
+
+

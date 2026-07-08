@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.env
+node_modules/
+frontend/css/tailwind.css
+.agents/
+.hanesu/
+AGENTS.md
