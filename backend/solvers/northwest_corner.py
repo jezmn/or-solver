@@ -87,7 +87,7 @@ def solve_northwest_corner(supply, demand, costs, optimization="min"):
         {
             "description": f"Initial solution: total cost = {total_cost:.2f}, occupied cells = {occupied}/{needed} ({'non-degenerate' if occupied >= needed else 'degenerate'})",
             "data": {
-                "_step_type": "vogel_initial",
+                "_step_type": "nwcorner_initial",
                 "costs": [row[:] for row in costs],
                 "allocation": [row[:] for row in allocation],
                 "total_cost": total_cost,

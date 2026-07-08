@@ -655,6 +655,59 @@ function renderStepType_nwcorner_iteration(data) {
   return h;
 }
 
+function renderStepType_nwcorner_initial(data) {
+  const costs = data.costs || [];
+  const alloc = data.allocation || [];
+  if (!costs.length || !costs[0]) return '<p class="text-xs text-slate-500 dark:text-slate-400">'+__t('no.data')+'</p>';
+
+  const rows = alloc.length;
+  const cols = alloc[0] ? alloc[0].length : 0;
+
+  let h = '<div class="space-y-3">';
+
+  let costTerms = [];
+  for (let i = 0; i < alloc.length; i++) {
+    for (let j = 0; j < (alloc[i] || []).length; j++) {
+      if (alloc[i][j] > 0) {
+        costTerms.push(`${costs[i][j]}(${alloc[i][j]})`);
+      }
+    }
+  }
+  h += '<div class="text-xs">';
+  h += `<span class="font-semibold text-slate-700 dark:text-slate-200">${__t('total.cost')}</span> `;
+  h += `<span class="font-mono text-slate-600 dark:text-slate-400">${costTerms.join(' + ')}</span>`;
+  h += ` <span class="font-bold text-indigo-600 dark:text-indigo-400">= ${formatNumber(data.total_cost, 2)}</span>`;
+  h += '</div>';
+
+  h += '<div><span class="font-semibold text-sm text-slate-700 dark:text-slate-200">' + __t('initial.allocation') + '</span>';
+  h += '<div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700"><table class="min-w-full text-xs border-collapse bg-white dark:bg-slate-900">';
+  h += '<thead><tr><th class="border border-slate-300 dark:border-slate-600 px-2 py-1 bg-slate-100 dark:bg-slate-800"></th>';
+  for (let j = 0; j < cols; j++) {
+    h += `<th class="border border-slate-300 dark:border-slate-600 px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold">D${j + 1}</th>`;
+  }
+  h += '</tr></thead><tbody>';
+  for (let i = 0; i < rows; i++) {
+    h += '<tr>';
+    h += `<td class="border border-slate-300 dark:border-slate-700 px-2 py-1 font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-800 dark:text-sky-200">S${i + 1}</td>`;
+    for (let j = 0; j < cols; j++) {
+      const cost = costs[i] !== undefined && costs[i][j] !== undefined ? costs[i][j] : '';
+      const allocVal = alloc[i] !== undefined && alloc[i][j] !== undefined ? alloc[i][j] : 0;
+      h += '<td class="border border-slate-300 dark:border-slate-700 px-2 py-1 text-center">';
+      h += `<div class="text-slate-500 dark:text-slate-400">${escHtml(String(cost))}</div>`;
+      if (allocVal > 0) {
+        h += `<div class="font-bold text-indigo-600 dark:text-indigo-400">${escHtml(String(allocVal))}</div>`;
+      } else {
+        h += '<div class="text-slate-300 dark:text-slate-600">—</div>';
+      }
+      h += '</td>';
+    }
+    h += '</tr>';
+  }
+  h += '</tbody></table></div></div>';
+  h += '</div>';
+  return h;
+}
+
 function renderStepType_vogel_initial(data) {
   const costs = data.costs || [];
   const alloc = data.allocation || [];
@@ -893,6 +946,7 @@ function renderStepData(data) {
       case 'modi_iteration': return renderStepType_modi_iteration(data);
       case 'vogel_iteration': return renderStepType_vogel_iteration(data);
       case 'vogel_initial': return renderStepType_vogel_initial(data);
+      case 'nwcorner_initial': return renderStepType_nwcorner_initial(data);
       case 'nwcorner_iteration': return renderStepType_nwcorner_iteration(data);
       case 'degeneracy_fix': return renderStepType_degeneracy_fix(data);
       case 'simplex_tableau': return renderStepType_simplex_tableau(data);
