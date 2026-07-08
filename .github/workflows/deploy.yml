@@ -16,12 +16,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create .env
-        run: |
-          printf "%s" "${{ secrets.ENVIRONMENT }}" > .env
-
       - name: Deploy
         run: |
+          docker compose down
           docker compose up -d --build
 
       - name: Cleanup
