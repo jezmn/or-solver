@@ -119,7 +119,7 @@ const TRANSLATIONS = {
     'objective.label': 'obj',
     'priority.label': 'Priority',
     'footer.text': 'Operations Research Solver — Alpine.js + Tailwind CSS + FastAPI',
-    'footer.source': '\u00a9 2024 OR Solver. All rights reserved.',
+    'footer.source': '\u00a9 2026 OR Solver. All rights reserved.',
 
     'no.data': 'No data',
     'matrix.covered.row': 'Covered row',
@@ -340,7 +340,7 @@ const TRANSLATIONS = {
     'objective.label': 'obj',
     'priority.label': 'Prioridad',
     'footer.text': 'OR Solver — Alpine.js + Tailwind CSS + FastAPI',
-    'footer.source': '\u00a9 2024 OR Solver. Todos los derechos reservados.',
+    'footer.source': '\u00a9 2026 OR Solver. Todos los derechos reservados.',
 
     'no.data': 'Sin datos',
     'matrix.covered.row': 'Fila cubierta',
