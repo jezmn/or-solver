@@ -166,8 +166,8 @@
               <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('assignments')">Assignments</h4>
               <template x-for="(assigned, idx) in (result?.solution?.assignment ?? [])" :key="idx">
                 <div class="flex justify-between text-xs border-b border-slate-100 dark:border-zinc-700 py-1">
-                  <span class="font-mono" x-text="$store.i18n.t('task') + ' ' + (idx + 1)"></span>
-                  <span class="font-mono" x-text="assigned >= 0 ? '→ ' + $store.i18n.t('worker') + ' ' + (assigned + 1) : $store.i18n.t('unassigned')"></span>
+                  <span class="font-mono" x-text="rowNames[idx] || ($store.i18n.t('task') + ' ' + (idx + 1))"></span>
+                  <span class="font-mono" x-text="assigned >= 0 ? '→ ' + (colNames[assigned] || ($store.i18n.t('worker') + ' ' + (assigned + 1))) : $store.i18n.t('unassigned')"></span>
                 </div>
               </template>
             </div>
@@ -176,7 +176,7 @@
 
         <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="result?.steps?.length">
           <h2 class="text-lg font-bold mb-3" x-text="$store.i18n.t('steps')">Steps</h2>
-          <div id="steps-container" x-html="result?.steps?.length ? renderSteps(result.steps) : ''"></div>
+          <div id="steps-container" x-html="result?.steps?.length ? renderSteps(result.steps, { rowNames, colNames }) : ''"></div>
         </div>
 
         <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="result?.graph?.data">
@@ -303,13 +303,13 @@
           html += '<thead><tr class="bg-slate-100 dark:bg-slate-800">';
           html += '<th class="border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-center font-semibold text-slate-700 dark:text-slate-200"></th>';
           for (let j = 0; j < nCols; j++) {
-            html += `<th class="border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-center font-semibold text-slate-700 dark:text-slate-200">T${j + 1}</th>`;
+            html += `<th class="border border-slate-300 dark:border-slate-600 px-2 py-1.5 text-center font-semibold text-slate-700 dark:text-slate-200">${escHtml(this.colNames[j] || ('T' + (j + 1)))}</th>`;
           }
           html += '</tr></thead><tbody>';
 
           for (let i = 0; i < nRows; i++) {
             html += '<tr>';
-            html += `<td class="border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-center font-semibold text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/70">W${i + 1}</td>`;
+            html += `<td class="border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-center font-semibold text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-800/70">${escHtml(this.rowNames[i] || ('W' + (i + 1)))}</td>`;
             for (let j = 0; j < nCols; j++) {
               const val = matrix[i][j];
               const intensity = (val - minVal) / range;

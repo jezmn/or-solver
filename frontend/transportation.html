@@ -67,6 +67,30 @@
           </div>
         </div>
         <div class="space-y-4" @input="onInputChange()">
+          <div class="flex gap-4">
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1" x-text="$store.i18n.t('optimization')">Optimization</label>
+            <div x-data="{ open: false }" class="relative">
+              <button type="button" @click="open = !open" @keydown.escape="open = false"
+                class="w-full flex items-center justify-between gap-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800/60 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-100 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors">
+                <span x-text="optimization === 'max' ? $store.i18n.t('maximize') : $store.i18n.t('minimize')"></span>
+                <svg :class="{ 'rotate-180': open }" class="w-4 h-4 transition-transform text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              </button>
+              <div x-show="open" @click.away="open = false"
+                class="absolute z-50 mt-1 w-full rounded-lg border border-zinc-200 dark:border-zinc-700/50 bg-white dark:bg-zinc-900 shadow-lg overflow-hidden">
+                <button @click="optimization = 'max'; open = false"
+                  class="w-full text-left px-3 py-2 text-sm transition-colors"
+                  :class="optimization === 'max' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'"
+                  x-text="$store.i18n.t('maximize')">
+                </button>
+                <button @click="optimization = 'min'; open = false"
+                  class="w-full text-left px-3 py-2 text-sm transition-colors"
+                  :class="optimization === 'min' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'"
+                  x-text="$store.i18n.t('minimize')">
+                </button>
+              </div>
+            </div>
+          </div>
           <div class="flex-1">
             <label class="block text-sm font-medium text-slate-700 dark:text-zinc-300 mb-1" x-text="$store.i18n.t('method')">Method</label>
             <div x-data="{ open: false }" class="relative">
@@ -87,6 +111,7 @@
                 </button>
               </div>
             </div>
+          </div>
           </div>
 
           <div>
@@ -191,6 +216,7 @@
     function transportPage() {
       return {
         method: 'vogel',
+        optimization: 'min',
         numRows: 3,
         numCols: 3,
         supply: ['', '', ''],
@@ -281,7 +307,7 @@
           const costRows = this.costs.map(r => r.map(Number));
           for (const row of costRows) { if (row.some(isNaN)) { this.error = 'Cost matrix values must be numeric.'; return; } }
 
-          const input = { supply, demand, costs: costRows };
+          const input = { supply, demand, costs: costRows, optimization: this.optimization };
           const cacheKey = getCacheKey(this.method, input);
           const cached = getFromCache(cacheKey);
           if (cached) { this.result = cached.result; return; }

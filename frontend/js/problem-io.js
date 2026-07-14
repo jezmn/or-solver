@@ -130,7 +130,7 @@ function applyLpProblemInput(table, input) {
   table.varNames = Array.isArray(input.varNames) && input.varNames.length >= table.numVars
     ? input.varNames.map(String)
     : Array.from({ length: table.numVars }, (_, i) => (input.varNames && input.varNames[i]) ? String(input.varNames[i]) : 'x' + (i + 1));
-  table.rows = [
+  const newRows = [
     { cells: input.objective.map(inputValue), label: '' },
     ...input.constraints.map((row, idx) => ({
       cells: row.map(inputValue),
@@ -139,6 +139,17 @@ function applyLpProblemInput(table, input) {
       label: (input.labels && input.labels[idx]) ? String(input.labels[idx]) : 'Constraint ' + (idx + 1),
     })),
   ];
+  while (table.rows.length > newRows.length) table.rows.pop();
+  for (let i = 0; i < newRows.length; i++) {
+    if (i < table.rows.length) {
+      table.rows[i].cells = newRows[i].cells;
+      table.rows[i].label = newRows[i].label;
+      if (table.rows[i].sign !== undefined) table.rows[i].sign = newRows[i].sign;
+      if (table.rows[i].rhs !== undefined) table.rows[i].rhs = newRows[i].rhs;
+    } else {
+      table.rows.push(newRows[i]);
+    }
+  }
 }
 
 function validateIntegerProblemInput(input) {
@@ -248,6 +259,7 @@ function getTransportationProblemInput(page) {
     supply: page.supply.map(Number),
     demand: page.demand.map(Number),
     costs: page.costs.map((row) => row.map(Number)),
+    optimization: page.optimization || 'min',
     sourceNames: page.sourceNames ? page.sourceNames.map(String) : [],
     destNames: page.destNames ? page.destNames.map(String) : [],
   };
@@ -271,6 +283,7 @@ function applyTransportationProblemInput(page, input) {
   page.costs = input.costs.map((row) => row.map(inputValue));
   page.supply = input.supply.map(inputValue);
   page.demand = input.demand.map(inputValue);
+  if (input.optimization) page.optimization = input.optimization;
   page.sourceNames = Array.isArray(input.sourceNames) && input.sourceNames.length >= page.numRows
     ? input.sourceNames.map(String)
     : Array.from({ length: page.numRows }, (_, i) => (input.sourceNames && input.sourceNames[i]) ? String(input.sourceNames[i]) : 'Source ' + (i + 1));

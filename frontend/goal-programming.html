@@ -430,7 +430,7 @@
           const data = this.result.graph.data.objectives_achieved;
           const goalLabels = this.rows.map((r, i) => r.label || `Goal ${i + 1}`);
           const doneColor = '#22c55e';
-          const missColor = '#ef4444';
+          const missColor = '#f97316';
           this.chartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -443,8 +443,13 @@
                 },
                 {
                   label: Alpine.store('i18n').t('chart.achieved'),
-                  data: data.map(d => d.achieved),
-                  backgroundColor: data.map(d => Math.abs(d.deviation) > 0.01 ? missColor : doneColor),
+                  data: data.map(d => Math.abs(d.deviation) > 0.01 ? null : d.achieved),
+                  backgroundColor: doneColor,
+                },
+                {
+                  label: Alpine.store('i18n').t('chart.miss'),
+                  data: data.map(d => Math.abs(d.deviation) > 0.01 ? d.achieved : null),
+                  backgroundColor: missColor,
                 },
               ],
             },

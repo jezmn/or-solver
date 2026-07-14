@@ -26,12 +26,46 @@ const STEP_DESC_MAP = {
   'Computed reduced costs for variables': 'step.sensitivity.reduced_costs',
   'Estimated RHS ranges': 'step.sensitivity.rhs_ranges',
   'Estimated objective coefficient ranges': 'step.sensitivity.obj_ranges',
+  'For each row, find the minimum value in that row, then subtract it from every cell in the row.': 'step.assignment.row.operation',
+  'For each column, find the minimum value in that column, then subtract it from every cell in the column.': 'step.assignment.col.operation',
+  'Root node: LP relaxation is already integer feasible': 'step.ip.root.integer_feasible',
+  'No integer feasible solution found — all branches explored': 'step.ip.no_integer_feasible',
 };
+
+const STEP_DESC_PATTERNS = [
+  { regex: /^Converting maximization to minimization: subtract each profit from max value \((.+)\)$/, key: 'step.assignment.max.to.min' },
+  { regex: /^Problem: (\d+) workers? × (\d+) tasks? \(minimize cost\)$/, key: 'step.assignment.problem.min' },
+  { regex: /^Iteration (\d+): cover zeros — optimal! \((\d+) lines = matrix size (\d+)\)$/, key: 'step.assignment.iteration.optimal' },
+  { regex: /^Iteration (\d+): adjust matrix \(minimum uncovered value = (.+)\)$/, key: 'step.assignment.iteration.adjust' },
+  { regex: /^Total Cost: (.+)$/, key: 'step.assignment.total.cost' },
+  { regex: /^Total Profit: (.+)$/, key: 'step.assignment.total.profit' },
+  { regex: /^Number of lines \((\d+)\) equals matrix size \((\d+)\)\. Zero covering is optimal — the algorithm can now find the best assignment\.$/, key: 'step.assignment.lines.optimal' },
+  { regex: /^Minimum uncovered value is (.+)\. Subtract it from all uncovered cells, add it to cells at the intersection of covered rows and covered columns\.$/, key: 'step.assignment.min.uncovered' },
+  { regex: /^Problem: (\d+) variables, (\d+) constraints, (\d+) integer vars$/, key: 'step.ip.problem' },
+  { regex: /^Root node: branch on x(\d+)$/, key: 'step.ip.root.branch' },
+  { regex: /^(.+): infeasible relaxation$/, key: 'step.ip.infeasible_relaxation' },
+  { regex: /^(.+): pruned by bound$/, key: 'step.ip.pruned_bound' },
+  { regex: /^(.+): integer feasible$/, key: 'step.ip.integer_feasible' },
+  { regex: /^(.+): branch on x(\d+)$/, key: 'step.ip.node.branch' },
+  { regex: /^Branch & Bound complete — optimal integer solution Z=(.+)$/, key: 'step.ip.bb_complete' },
+  { regex: /^Node limit \((\d+)\) reached — not proven optimal/, key: 'step.ip.node_limit' },
+];
 
 function translateStepDescription(desc) {
   if (!desc) return desc;
   const key = STEP_DESC_MAP[desc];
-  return key ? __t(key, desc) : desc;
+  if (key) return __t(key, desc);
+  for (const pat of STEP_DESC_PATTERNS) {
+    const m = desc.match(pat.regex);
+    if (m) {
+      let result = __t(pat.key, desc);
+      for (let i = 0; i < m.length; i++) {
+        result = result.replace(`{${i}}`, m[i]);
+      }
+      return result;
+    }
+  }
+  return desc;
 }
 
 function formatNumber(n, decimals) {
@@ -84,10 +118,18 @@ function formatLinearExpressionText(coefficients, variableNames) {
 
 function remapStepVarNames(text, varNames) {
   if (!varNames || !varNames.length) return text;
+  if (typeof varNames === 'object' && !Array.isArray(varNames)) return text;
   return text.replace(/\bx(\d+)\b/g, (match, digits) => {
     const idx = parseInt(digits, 10) - 1;
     return (idx >= 0 && idx < varNames.length) ? varNames[idx] : match;
   });
+}
+
+function getAssignmentLabel(varNames, index, isRow) {
+  if (!varNames || typeof varNames !== 'object' || Array.isArray(varNames)) return null;
+  const names = isRow ? varNames.rowNames : varNames.colNames;
+  if (names && index >= 0 && index < names.length) return names[index];
+  return null;
 }
 
 function formatConstraintEquation(row, variableNames) {
@@ -235,7 +277,8 @@ function renderSteps(steps, varNames) {
 }
 
 function renderOperation(text) {
-  return `<div class="border-l-4 border-indigo-400 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 pl-3 py-2 text-xs text-indigo-800 dark:text-indigo-200 rounded-r-md">${escHtml(text)}</div>`;
+  const translated = translateStepDescription(text);
+  return `<div class="border-l-4 border-indigo-400 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 pl-3 py-2 text-xs text-indigo-800 dark:text-indigo-200 rounded-r-md">${escHtml(translated)}</div>`;
 }
 
 function renderStepType_max_to_min(data) {
@@ -268,11 +311,14 @@ function renderStepType_problem_statement(data) {
   return h;
 }
 
-function renderStepType_row_reduction(data) {
+function renderStepType_row_reduction(data, varNames) {
   let h = '<div class="space-y-3">';
   h += renderOperation(data.operation || __t('row.reduction.operation'));
   if (data.row_minima) {
-    const rows = data.row_minima.map((v, i) => [__t('row') + ' ' + (i + 1), formatNumber(v, 2)]);
+    const rows = data.row_minima.map((v, i) => {
+      const label = getAssignmentLabel(varNames, i, true) || (__t('row') + ' ' + (i + 1));
+      return [label, formatNumber(v, 2)];
+    });
     h += renderTable([__t('row'), __t('min.value')], rows, __t('row.minima'));
   }
   h += '<div><span class="font-semibold text-sm text-slate-700 dark:text-slate-200">' + __t('before.row.reduction') + '</span>' + renderMatrix(data.matrix_before) + '</div>';
@@ -281,11 +327,14 @@ function renderStepType_row_reduction(data) {
   return h;
 }
 
-function renderStepType_col_reduction(data) {
+function renderStepType_col_reduction(data, varNames) {
   let h = '<div class="space-y-3">';
   h += renderOperation(data.operation || __t('col.reduction.operation'));
   if (data.column_minima) {
-    const rows = data.column_minima.map((v, j) => [__t('column') + ' ' + (j + 1), formatNumber(v, 2)]);
+    const rows = data.column_minima.map((v, j) => {
+      const label = getAssignmentLabel(varNames, j, false) || (__t('column') + ' ' + (j + 1));
+      return [label, formatNumber(v, 2)];
+    });
     h += renderTable([__t('column'), __t('min.value')], rows, __t('column.minima'));
   }
   h += '<div><span class="font-semibold text-sm text-slate-700 dark:text-slate-200">' + __t('before.col.reduction') + '</span>' + renderMatrix(data.matrix_before) + '</div>';
@@ -294,16 +343,24 @@ function renderStepType_col_reduction(data) {
   return h;
 }
 
-function renderStepType_line_drawing(data) {
+function renderStepType_line_drawing(data, varNames) {
   let h = '<div class="space-y-3">';
   h += `<p class="text-xs text-slate-600 dark:text-slate-400">${__t('lines.used')} <span class="font-bold text-slate-800 dark:text-slate-200">${escHtml(String(data.lines_count))}</span>`;
   if (data.covered_rows && data.covered_rows.length) {
-    h += ` ${__t('covered.rows')} <span class="font-mono">${data.covered_rows.map(r => `R${r + 1}`).join(', ')}</span>`;
+    const rowLabels = data.covered_rows.map(r => {
+      const label = getAssignmentLabel(varNames, r, true);
+      return label ? `<span class="font-mono">${escHtml(label)}</span>` : `<span class="font-mono">R${r + 1}</span>`;
+    });
+    h += ` ${__t('covered.rows')} ${rowLabels.join(', ')}`;
   } else {
     h += ' ' + __t('no.rows.covered');
   }
   if (data.covered_cols && data.covered_cols.length) {
-    h += ` ${__t('covered.columns')} <span class="font-mono">${data.covered_cols.map(c => `C${c + 1}`).join(', ')}</span>`;
+    const colLabels = data.covered_cols.map(c => {
+      const label = getAssignmentLabel(varNames, c, false);
+      return label ? `<span class="font-mono">${escHtml(label)}</span>` : `<span class="font-mono">C${c + 1}</span>`;
+    });
+    h += ` ${__t('covered.columns')} ${colLabels.join(', ')}`;
   } else {
     h += ' ' + __t('no.columns.covered');
   }
@@ -314,7 +371,7 @@ function renderStepType_line_drawing(data) {
     + '</div>';
 
   if (data.is_optimal) {
-    h += `<div class="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-3 py-2 rounded text-xs font-medium">${escHtml(data.operation || __t('optimal.assignment.found'))}</div>`;
+    h += `<div class="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 px-3 py-2 rounded text-xs font-medium">${escHtml(translateStepDescription(data.operation) || __t('optimal.assignment.found'))}</div>`;
   } else {
     h += renderOperation(data.operation || '');
     if (data.min_uncovered !== undefined) {
@@ -536,7 +593,7 @@ function renderMatrixWithHighlight(matrix, highlight) {
   return html;
 }
 
-function renderStepType_result(data) {
+function renderStepType_result(data, varNames) {
   let h = '<div class="space-y-3">';
   if (data.matrix) {
     const highlight = {};
@@ -548,16 +605,12 @@ function renderStepType_result(data) {
       + '</div>';
   }
   if (data.assignment) {
-    const rows = data.assignment.map((a, i) => [__t('task') + ' ' + (i + 1), a >= 0 ? __t('worker.label') + ' ' + (a + 1) : __t('unassigned')]);
+    const rows = data.assignment.map((a, i) => {
+      const rowLabel = getAssignmentLabel(varNames, i, true) || (__t('task') + ' ' + (i + 1));
+      const colLabel = a >= 0 ? (getAssignmentLabel(varNames, a, false) || (__t('worker.label') + ' ' + (a + 1))) : __t('unassigned');
+      return [rowLabel, colLabel];
+    });
     h += renderTable([__t('task'), __t('assigned.to')], rows, __t('assignments'));
-  }
-  if (data.assignment_pairs && data.assignment_pairs.length) {
-    const rows = data.assignment_pairs.map(p => [escHtml(p[0] || ''), escHtml(p[1] || '')]);
-    h += renderTable([__t('worker.label'), __t('task')], rows, __t('assignment.pairs'));
-  }
-  if (data.total !== undefined) {
-    const label = data.optimization === 'max' ? __t('total.profit') : __t('total.cost');
-    h += `<p class="text-sm font-bold text-indigo-600 dark:text-indigo-400">${escHtml(label)}: ${formatNumber(data.total, 2)}</p>`;
   }
   h += '</div>';
   return h;
@@ -984,12 +1037,12 @@ function renderStepData(data, varNames) {
 
   if (data._step_type) {
     switch (data._step_type) {
-      case 'max_to_min': return renderStepType_max_to_min(data);
+      case 'max_to_min': return renderStepType_max_to_min(data, varNames);
       case 'problem_statement': return renderStepType_problem_statement(data);
-      case 'row_reduction': return renderStepType_row_reduction(data);
-      case 'col_reduction': return renderStepType_col_reduction(data);
-      case 'line_drawing': return renderStepType_line_drawing(data);
-      case 'result': return renderStepType_result(data);
+      case 'row_reduction': return renderStepType_row_reduction(data, varNames);
+      case 'col_reduction': return renderStepType_col_reduction(data, varNames);
+      case 'line_drawing': return renderStepType_line_drawing(data, varNames);
+      case 'result': return renderStepType_result(data, varNames);
       case 'modi_iteration': return renderStepType_modi_iteration(data);
       case 'vogel_iteration': return renderStepType_vogel_iteration(data);
       case 'vogel_initial': return renderStepType_vogel_initial(data);
@@ -1002,8 +1055,9 @@ function renderStepData(data, varNames) {
   }
 
   let html = '<div class="space-y-2">';
+  const skipKeys = new Set(['nonachievement', 'lock']);
   for (const [key, val] of Object.entries(data)) {
-    if (key === '_step_type') continue;
+    if (key === '_step_type' || skipKeys.has(key)) continue;
     const label = `<span class="font-semibold text-slate-700 dark:text-slate-200">${escHtml(key)}:</span>`;
     if (Array.isArray(val) && val.length > 0 && Array.isArray(val[0])) {
       html += `<div>${label}`;

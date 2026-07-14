@@ -153,18 +153,18 @@
                     </td>
                     <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
                       <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                        <input type="text" x-model="table.rows[i + 1].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 min-w-[112px]" placeholder="0">
+                        <input type="text" x-model="row.cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 min-w-[112px]" placeholder="0">
                       </td>
                     </template>
                     <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                      <select x-model="table.rows[i + 1].sign" class="w-full px-1 py-1.5 text-center bg-white/70 dark:bg-zinc-900/60 border-0 outline-none text-xs text-slate-800 dark:text-zinc-100 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500">
+                      <select x-model="row.sign" class="w-full px-1 py-1.5 text-center bg-white/70 dark:bg-zinc-900/60 border-0 outline-none text-xs text-slate-800 dark:text-zinc-100 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500">
                         <option value="<=">≤</option>
                         <option value="=">=</option>
                         <option value=">=">≥</option>
                       </select>
                     </td>
                     <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                      <input type="text" x-model="table.rows[i + 1].rhs" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 min-w-[96px]" placeholder="0">
+                      <input type="text" x-model="row.rhs" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 min-w-[96px]" placeholder="0">
                     </td>
                     <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center text-xs font-mono text-slate-500 dark:text-zinc-400" x-text="formatEquation(row)"></td>
                   </tr>
@@ -504,10 +504,10 @@
             const data = step.data || {};
             let branchHtml = '';
             if (data.inherited_constraints && data.inherited_constraints.length) {
-              branchHtml += summaryRow('Inherited branch constraints:', data.inherited_constraints.map(remap).join(', '));
+              branchHtml += summaryRow(Alpine.store('i18n').t('ip.inherited_constraints'), data.inherited_constraints.map(remap).join(', '));
             }
             if (data.new_constraint) {
-              branchHtml += summaryRow('New branch constraint:', remap(data.new_constraint));
+              branchHtml += summaryRow(Alpine.store('i18n').t('ip.new_constraint'), remap(data.new_constraint));
             }
 
             let calcExtra = '';
@@ -516,29 +516,31 @@
             }
 
             if (data.simplified_constraints && data.simplified_constraints.length) {
-              branchHtml += summaryRow('Simplified branch constraints:', data.simplified_constraints.map(remap).join(', '));
+              branchHtml += summaryRow(Alpine.store('i18n').t('ip.simplified_constraints'), data.simplified_constraints.map(remap).join(', '));
             }
 
             const lpResult = data.lp_status && data.lp_status !== 'Optimal'
               ? data.lp_status
               : `${formatValues(data.variables)}, Z=${formatNumber(data.value)}`;
+            const translatedDesc = remap(translateStepDescription(remapStepVarNames(step.description || '', varNames)));
             return `
               <div class="border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 p-4 text-sm">
                 <div class="flex items-start justify-between gap-3 mb-3">
-                  <h3 class="font-semibold text-slate-900 dark:text-slate-50">${escHtml(remap(data.node_name || `Step ${idx + 1}`))}</h3>
-                  <span class="text-xs text-slate-500 dark:text-slate-400">Step ${idx + 1}</span>
+                  <h3 class="font-semibold text-slate-900 dark:text-slate-50">${escHtml(translatedDesc || remap(data.node_name || `${Alpine.store('i18n').t('step')} ${idx + 1}`))}</h3>
+                  <span class="text-xs text-slate-500 dark:text-slate-400">${Alpine.store('i18n').t('step')} ${idx + 1}</span>
                 </div>
                 <dl class="space-y-2">
                   ${branchHtml}
-                  ${summaryRow('LP relaxation result:', lpResult)}
-                  ${summaryRow('Integer check:', data.integer_check || 'checked')}
-                  ${summaryRow('Decision:', remap(data.decision || step.description || 'completed'))}
+                  ${summaryRow(Alpine.store('i18n').t('ip.lp_relaxation_result'), lpResult)}
+                  ${summaryRow(Alpine.store('i18n').t('ip.integer_check'), data.integer_check || 'checked')}
+                  ${summaryRow(Alpine.store('i18n').t('ip.decision'), remap(data.decision || step.description || Alpine.store('i18n').t('ip.step_completed')))}
                 </dl>
                 ${calculationDetails(data.calculations, calcExtra)}
               </div>`;
           };
 
           const renderGeneralStep = (step, idx) => {
+            const i18n = Alpine.store('i18n');
             const data = step.data || {};
             let lines = [];
             let extraHtml = '';
@@ -546,30 +548,32 @@
               const var0 = varNames && varNames[0] ? formatVariableName(varNames[0]) : 'x₁';
               const var1 = varNames && varNames[1] ? formatVariableName(varNames[1]) : 'x₂';
               const intText = (data.integer_variables || []).length ? data.integer_variables.map(v => {
-                const idx = parseInt(String(v).replace('x', ''), 10) - 1;
-                return formatVariableName((varNames && idx >= 0 && idx < varNames.length) ? varNames[idx] : v);
+                const vidx = parseInt(String(v).replace('x', ''), 10) - 1;
+                return formatVariableName((varNames && vidx >= 0 && vidx < varNames.length) ? varNames[vidx] : v);
               }).join(', ') : 'none';
+              const optLabel = this.optimization === 'max' ? i18n.t('maximize') : i18n.t('minimize');
               lines = [
-                `Objective: Z = ${formatExpr(data.objective)} (${this.optimization}imize).`,
-                `LP relaxation: ignore integrality temporarily; integer variables are ${intText}.`,
-                `Graph setup: set ${var1}=0 for the ${var0} intercept, then set ${var0}=0 for the ${var1} intercept.`,
+                remap(i18n.t('ip.objective').replace('{0}', formatExpr(data.objective)).replace('{1}', optLabel)),
+                remap(i18n.t('ip.lp_relaxation').replace('{0}', intText)),
+                i18n.t('ip.graph_setup').replace('{0}', var0).replace('{1}', var1),
               ];
               if (data.intercepts && data.intercepts.length) {
                 extraHtml = renderTable(['Constraint', 'Equation', `${var1} = 0`, `${var0} = 0`], data.intercepts, 'Graph intercepts');
               }
             } else if (data.variables && data.optimal_value !== undefined) {
-              lines = [`Final integer solution: ${formatValues(data.variables)}, Z=${formatNumber(data.optimal_value)}.`];
+              lines = [remap(i18n.t('ip.final_integer_solution').replace('{0}', formatValues(data.variables)).replace('{1}', formatNumber(data.optimal_value)))];
             } else if (data.nodes_explored !== undefined) {
-              lines = [`Nodes explored: ${data.nodes_explored}.`];
+              lines = [i18n.t('ip.nodes_explored').replace('{0}', String(data.nodes_explored))];
             } else {
-              lines = [remap(step.description) || 'Step completed.'];
+              lines = [remap(translateStepDescription(step.description) || i18n.t('ip.step_completed'))];
             }
 
+            const translatedDesc = remap(translateStepDescription(remapStepVarNames(step.description || '', varNames)));
             return `
               <div class="border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 p-4 text-sm">
                 <div class="flex items-start justify-between gap-3 mb-2">
-                  <h3 class="font-semibold text-slate-900 dark:text-slate-50">Step ${idx + 1}</h3>
-                  <span class="text-xs text-slate-500 dark:text-slate-400">${escHtml(formatMathText(remap(step.description || '')))}</span>
+                  <h3 class="font-semibold text-slate-900 dark:text-slate-50">${i18n.t('step')} ${idx + 1}</h3>
+                  <span class="text-xs text-slate-500 dark:text-slate-400">${escHtml(formatMathText(translatedDesc || step.description || ''))}</span>
                 </div>
                 <ul class="list-disc pl-5 space-y-1 text-slate-700 dark:text-slate-300">
                   ${lines.map(line => `<li>${escHtml(formatMathText(line))}</li>`).join('')}

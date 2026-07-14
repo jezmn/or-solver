@@ -70,7 +70,9 @@ def assignment_endpoint(data: AssignmentInput):
 
 @app.post("/api/northwest-corner")
 def northwest_corner_endpoint(data: TransportInput):
-    result = solve_northwest_corner(data.supply, data.demand, data.costs)
+    result = solve_northwest_corner(
+        data.supply, data.demand, data.costs, data.optimization
+    )
     if result["status"] == "infeasible":
         raise HTTPException(status_code=400, detail="Problem is infeasible")
     return result

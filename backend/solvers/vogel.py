@@ -159,8 +159,11 @@ def solve_vogel(supply, demand, costs, optimization="min"):
 
     modi_result = solve_modi(allocation, costs, supply, demand, steps)
     opt_alloc = modi_result["solution"]["allocation"]
-    opt_cost = modi_result["solution"]["total_cost"]
     all_steps = modi_result["steps"]
+
+    opt_cost = sum(
+        opt_alloc[i][j] * orig_costs[i][j] for i in range(orig_n) for j in range(orig_m)
+    )
 
     filtered_allocation = [
         [opt_alloc[i][j] for j in range(orig_m)] for i in range(orig_n)
