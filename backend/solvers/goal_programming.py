@@ -131,6 +131,34 @@ def solve_goal_programming(objectives, constraints, signs, rhs):
         lock_expr = pulp.lpSum(terms)
         locked.append(lock_expr <= total_dev + 1e-6)
 
+    pre_tb = {f"x{i + 1}": pulp.value(x[i]) for i in range(n)}
+
+    prob_tb = pulp.LpProblem("GP_TieBreak", pulp.LpMinimize)
+    for c in base_cons:
+        prob_tb += c
+    for c in locked:
+        prob_tb += c
+    for c in goal_cons:
+        prob_tb += c
+    prob_tb += pulp.lpSum(dp[g] for g in range(n_goals))
+    prob_tb.solve(pulp.PULP_CBC_CMD(msg=False))
+
+    post_tb = {f"x{i + 1}": pulp.value(x[i]) for i in range(n)}
+    tb_changed = any(
+        abs((pre_tb.get(k, 0) or 0) - (post_tb.get(k, 0) or 0)) > 1e-4 for k in post_tb
+    )
+    if tb_changed:
+        steps.append(
+            {
+                "description": "Tie-breaking: selecting tightest solution",
+                "data": {
+                    "step": "Minimizing total overachievement (sum of d+)",
+                    "nonachievement": 0,
+                    "lock": "Multiple optima detected, choosing best",
+                },
+            }
+        )
+
     var_values = {f"x{i + 1}": pulp.value(x[i]) for i in range(n)}
 
     achieved = []
