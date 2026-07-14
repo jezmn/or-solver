@@ -70,7 +70,7 @@ def _terminal_tree_graph(label, node_type):
     }
 
 
-def _fmt_num(value, decimals=4):
+def _fmt_num(value, decimals=2):
     if value is None:
         return "N/A"
     num = float(value)
@@ -1186,7 +1186,7 @@ def solve_integer_programming(
     if best_int_vars is not None:
         steps.append(
             {
-                "description": f"Branch & Bound complete — optimal integer solution Z={best_int_val:.4f}",
+                "description": f"Branch & Bound complete — optimal integer solution Z={_fmt_num(best_int_val)}",
                 "data": {
                     "variables": best_int_vars,
                     "optimal_value": best_int_val,

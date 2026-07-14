@@ -1,6 +1,13 @@
 from backend.solvers.modi import solve_modi
 
 
+def _fmt_num(x):
+    num = float(x)
+    if num == int(num):
+        return str(int(num))
+    return f"{num:.2f}"
+
+
 def _balance(supply, demand, costs):
     total_supply = sum(supply)
     total_demand = sum(demand)
@@ -58,7 +65,7 @@ def solve_northwest_corner(supply, demand, costs, optimization="min"):
 
         steps.append(
             {
-                "description": f"Iteration {iteration + 1}: Allocated {alloc} at ({i}, {j}) cost={costs[i][j]}",
+                "description": f"Iteration {iteration + 1}: Allocated {_fmt_num(alloc)} at ({i}, {j}) cost={_fmt_num(costs[i][j])}",
                 "data": {
                     "_step_type": "nwcorner_iteration",
                     "row": i,
@@ -85,7 +92,7 @@ def solve_northwest_corner(supply, demand, costs, optimization="min"):
     needed = n + m - 1
     steps.append(
         {
-            "description": f"Initial solution: total cost = {total_cost:.2f}, occupied cells = {occupied}/{needed} ({'non-degenerate' if occupied >= needed else 'degenerate'})",
+            "description": f"Initial solution: total cost = {_fmt_num(total_cost)}, occupied cells = {occupied}/{needed} ({'non-degenerate' if occupied >= needed else 'degenerate'})",
             "data": {
                 "_step_type": "nwcorner_initial",
                 "costs": [row[:] for row in costs],

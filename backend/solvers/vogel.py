@@ -2,6 +2,13 @@ import copy
 from backend.solvers.modi import solve_modi
 
 
+def _fmt_num(x):
+    num = float(x)
+    if num == int(num):
+        return str(int(num))
+    return f"{num:.2f}"
+
+
 def _balance(supply, demand, costs):
     total_supply = sum(supply)
     total_demand = sum(demand)
@@ -112,7 +119,7 @@ def solve_vogel(supply, demand, costs, optimization="min"):
 
         steps.append(
             {
-                "description": f"Iteration {iteration + 1}: Allocated {alloc} at ({row_idx}, {col_idx}) cost={costs[row_idx][col_idx]}",
+                "description": f"Iteration {iteration + 1}: Allocated {_fmt_num(alloc)} at ({row_idx}, {col_idx}) cost={_fmt_num(costs[row_idx][col_idx])}",
                 "data": {
                     "_step_type": "vogel_iteration",
                     "row": row_idx,
@@ -137,7 +144,7 @@ def solve_vogel(supply, demand, costs, optimization="min"):
 
     steps.append(
         {
-            "description": f"Initial solution: total cost = {total_cost:.2f}, occupied cells = {occupied}/{needed} {'(degenerate)' if is_degenerate else '(non-degenerate)'}",
+            "description": f"Initial solution: total cost = {_fmt_num(total_cost)}, occupied cells = {occupied}/{needed} {'(degenerate)' if is_degenerate else '(non-degenerate)'}",
             "data": {
                 "_step_type": "vogel_initial",
                 "total_cost": total_cost,

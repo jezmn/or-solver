@@ -2,6 +2,13 @@ import pulp
 import numpy as np
 
 
+def _fmt_num(x):
+    num = float(x)
+    if num == int(num):
+        return str(int(num))
+    return f"{num:.2f}"
+
+
 def solve_dual(objective, constraints, signs, rhs, optimization):
     primal_dir = pulp.LpMaximize if optimization == "max" else pulp.LpMinimize
     prob = pulp.LpProblem("Primal", primal_dir)
@@ -108,7 +115,7 @@ def solve_dual(objective, constraints, signs, rhs, optimization):
 
     steps.append(
         {
-            "description": f"Dual solved: optimal value = {dual_val:.4f}"
+            "description": f"Dual solved: optimal value = {_fmt_num(dual_val)}"
             if dual_val is not None
             else "Dual solved: optimal value = N/A",
             "data": {

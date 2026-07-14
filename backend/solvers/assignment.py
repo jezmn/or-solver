@@ -1,6 +1,9 @@
 def _display_num(x):
-    if isinstance(x, float) and x == int(x):
-        return str(int(x))
+    num = float(x)
+    if num == int(num):
+        return str(int(num))
+    if isinstance(x, float):
+        return f"{x:.2f}".rstrip("0").rstrip(".")
     return str(x)
 
 

@@ -1,6 +1,13 @@
 import pulp
 
 
+def _fmt_num(x):
+    num = float(x)
+    if num == int(num):
+        return str(int(num))
+    return f"{num:.2f}"
+
+
 def solve_goal_programming(objectives, constraints, signs, rhs):
     objectives = [o if isinstance(o, dict) else o.model_dump() for o in objectives]
     n = len(constraints[0]) if constraints else len(objectives[0]["coefficients"])
@@ -105,14 +112,14 @@ def solve_goal_programming(objectives, constraints, signs, rhs):
         minimized_str = " + ".join(dev_terms) if dev_terms else "none"
 
         lock_desc = (
-            f"Total deviation locked to ≤ {total_dev:.2f} for lower priorities"
+            f"Total deviation locked to ≤ {_fmt_num(total_dev)} for lower priorities"
             if prio != priorities[-1]
             else "Final priority — no lock needed"
         )
 
         steps.append(
             {
-                "description": f"Priority {prio}: nonachievement = {total_dev:.2f}",
+                "description": f"Priority {prio}: nonachievement = {_fmt_num(total_dev)}",
                 "data": {
                     "step": f"Minimizing: {minimized_str}",
                     "nonachievement": total_dev,

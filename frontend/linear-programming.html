@@ -109,18 +109,18 @@
             </div>
           </div>
 
-          <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-700">
-            <table class="w-full text-xs border-collapse bg-white dark:bg-zinc-800">
+           <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-700">
+            <table x-ref="inputTable" class="w-full text-xs border-collapse bg-white dark:bg-zinc-800">
               <thead>
                 <tr class="bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200">
-                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-44" x-text="$store.i18n.t('name')"></th>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-44 min-w-[176px]" x-text="$store.i18n.t('name')"></th>
                   <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
-                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-mono font-medium text-slate-600 dark:text-zinc-300 w-24 min-w-[96px]">
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-mono font-medium text-slate-600 dark:text-zinc-300 w-24 min-w-[112px]">
                       <input type="text" x-model="table.varNames[j]" class="w-full px-1 py-1 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded" placeholder="x">
                     </th>
                   </template>
                   <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-16" x-text="$store.i18n.t('sign')"></th>
-                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24" x-text="$store.i18n.t('rhs')"></th>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24 min-w-[96px]" x-text="$store.i18n.t('rhs')"></th>
                   <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-48" x-text="$store.i18n.t('equation')"></th>
                 </tr>
 
@@ -130,7 +130,7 @@
                   <td class="border border-slate-300 dark:border-zinc-700 p-0 text-center text-slate-500 dark:text-zinc-400 text-xs bg-indigo-50 dark:bg-indigo-950/40 font-medium" x-text="$store.i18n.t('objective.row')"></td>
                   <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
                     <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                      <input type="text" x-model="table.rows[0].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-indigo-100 dark:focus:bg-indigo-950/60 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                      <input type="text" x-model="table.rows[0].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-indigo-100 dark:focus:bg-indigo-950/60 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 min-w-[112px]" placeholder="0">
                     </td>
                   </template>
                   <td class="border border-slate-300 dark:border-zinc-700 p-0 text-center text-slate-500 dark:text-zinc-400 text-xs bg-indigo-50 dark:bg-indigo-950/40" x-text="$store.i18n.t('objective.label')"></td>
@@ -140,11 +140,11 @@
                 <template x-for="(row, i) in table.rows.slice(1)" :key="i">
                   <tr>
                     <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                      <input type="text" x-model="row.label" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 text-xs focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400" placeholder="c">
+                      <input type="text" x-model="row.label" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 text-xs focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 min-w-[176px]" placeholder="c">
                     </td>
                     <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
                       <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                        <input type="text" x-model="table.rows[i + 1].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                        <input type="text" x-model="table.rows[i + 1].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 min-w-[112px]" placeholder="0">
                       </td>
                     </template>
                     <td class="border border-slate-300 dark:border-zinc-700 p-0">
@@ -155,7 +155,7 @@
                       </select>
                     </td>
                     <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                      <input type="text" x-model="table.rows[i + 1].rhs" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                      <input type="text" x-model="table.rows[i + 1].rhs" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 min-w-[96px]" placeholder="0">
                     </td>
                     <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center text-xs font-mono text-slate-500 dark:text-zinc-400" x-text="formatEquation(row)"></td>
                   </tr>
@@ -210,7 +210,7 @@
               <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('decision.variables')"></h4>
               <template x-for="(v, name) in (result?.solution?.variables ?? {})" :key="name">
                 <div class="flex justify-between text-xs border-b border-slate-100 dark:border-zinc-700 py-1">
-                  <span class="font-mono" x-text="formatVariableName(name)"></span>
+                  <span class="font-mono" x-text="table.varNames[parseInt(name.replace('x',''))-1] || formatVariableName(name)"></span>
                   <span class="font-mono" x-text="formatNumber(v)"></span>
                 </div>
               </template>
@@ -228,9 +228,9 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <template x-for="row in (result?.solution?.constraint_analysis ?? [])" :key="row.constraint">
+                    <template x-for="(row, idx) in (result?.solution?.constraint_analysis ?? [])" :key="row.constraint">
                       <tr>
-                        <td class="border border-slate-200 dark:border-zinc-700 px-2 py-1 font-mono" x-text="row.constraint"></td>
+                        <td class="border border-slate-200 dark:border-zinc-700 px-2 py-1 font-mono" x-text="(table.rows[idx + 1]?.label) || row.constraint"></td>
                         <td class="border border-slate-200 dark:border-zinc-700 px-2 py-1 text-right font-mono" x-text="formatNumber(row.slack)"></td>
                         <td class="border border-slate-200 dark:border-zinc-700 px-2 py-1 text-right font-mono" x-text="formatNumber(row.dual_value)"></td>
                       </tr>
@@ -243,7 +243,7 @@
             <div class="mt-3" x-show="result?.solution?.reduced_costs?.length">
               <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('reduced.costs')"></h4>
               <template x-for="rc in (result?.solution?.reduced_costs ?? [])" :key="rc.variable">
-                <div class="flex justify-between text-xs border-b border-slate-100 dark:border-zinc-700 py-1"><span class="font-mono" x-text="rc.variable"></span><span class="font-mono" x-text="formatNumber(rc.value)"></span></div>
+                <div class="flex justify-between text-xs border-b border-slate-100 dark:border-zinc-700 py-1"><span class="font-mono" x-text="formatVariableName(remapStepVarNames(rc.variable, table.varNames))"></span><span class="font-mono" x-text="formatNumber(rc.value)"></span></div>
               </template>
             </div>
 
@@ -257,7 +257,7 @@
 
         <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="result?.steps?.length">
           <h2 class="text-lg font-bold mb-3" x-text="$store.i18n.t('steps')"></h2>
-          <div id="steps-container" x-html="result?.steps?.length ? renderSteps(result.steps) : ''"></div>
+          <div id="steps-container" x-html="result?.steps?.length ? renderSteps(result.steps, table.varNames) : ''"></div>
         </div>
 
         <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="result?.graph?.type === 'chart' && result?.graph?.data?.boundary_lines">
@@ -331,6 +331,7 @@
             applyLpProblemInput(this.table, input);
             this.optimization = input.optimization;
             this.result = null;
+            this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.table.cols, 250, 112));
 
             if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
           } catch (e) {
@@ -470,6 +471,8 @@
           this.table = createTableState(3, 2, { labels: true });
           for (let i = 1; i < this.table.rows.length; i++) this.table.rows[i].label = 'Constraint ' + i;
           this._wrapAddRow();
+          this._wrapColMethods();
+          this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.table.cols, 250, 112));
         },
 
         _wrapAddRow() {
@@ -479,6 +482,14 @@
             orig();
             self.table.rows[self.table.rows.length - 1].label = 'Constraint ' + (self.table.rows.length - 1);
           };
+        },
+
+        _wrapColMethods() {
+          const origAdd = this.table.addCol.bind(this.table);
+          const origRemove = this.table.removeCol.bind(this.table);
+          const self = this;
+          this.table.addCol = function () { origAdd(); syncTableWidth(self.$refs.inputTable, self.table.cols, 250, 112); };
+          this.table.removeCol = function () { origRemove(); syncTableWidth(self.$refs.inputTable, self.table.cols, 250, 112); };
         },
       };
     }

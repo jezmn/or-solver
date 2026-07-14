@@ -78,32 +78,32 @@
               </div>
             </div>
             <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-700">
-              <table class="min-w-full text-xs border-collapse bg-white dark:bg-zinc-800">
+              <table x-ref="inputTable" class="w-full text-xs border-collapse bg-white dark:bg-zinc-800">
                 <thead>
                   <tr class="bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200">
-                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-40" x-text="$store.i18n.t('name')">Name</th>
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-44 min-w-[176px]" x-text="$store.i18n.t('name')">Name</th>
                     <template x-for="(_, i) in Array(numCols).fill()" :key="i">
-                      <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20 min-w-[80px]">
+                      <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24 min-w-[96px]">
                         <input type="text" x-model="varNames[i]" class="w-full px-1 py-1 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded">
                       </th>
                     </template>
-                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('wt.plus')">Wt(d+)</th>
-                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('prty.plus')">Prty(d+)</th>
-                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('wt.minus')">Wt(d-)</th>
-                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('prty.minus')">Prty(d-)</th>
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24" x-text="$store.i18n.t('wt.plus')">Wt(d+)</th>
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24" x-text="$store.i18n.t('prty.plus')">Prty(d+)</th>
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24" x-text="$store.i18n.t('wt.minus')">Wt(d-)</th>
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24" x-text="$store.i18n.t('prty.minus')">Prty(d-)</th>
                     <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-16" x-text="$store.i18n.t('sign')">Sign</th>
-                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('rhs')">RHS</th>
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24 min-w-[96px]" x-text="$store.i18n.t('rhs')">RHS</th>
                   </tr>
                 </thead>
                 <tbody>
                   <template x-for="(row, i) in rows" :key="i">
                     <tr>
                       <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                        <input type="text" x-model="rows[i].label" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 text-xs focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400" :placeholder="$store.i18n.t('name')">
+                        <input type="text" x-model="rows[i].label" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 text-xs focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 min-w-[176px]" :placeholder="$store.i18n.t('name')">
                       </td>
                       <template x-for="(_, j) in Array(numCols).fill()" :key="j">
                         <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                          <input type="text" x-model="rows[i].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                          <input type="text" x-model="rows[i].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 min-w-[96px]" placeholder="0">
                         </td>
                       </template>
                       <td class="border border-slate-300 dark:border-zinc-700 p-0">
@@ -126,7 +126,7 @@
                         </select>
                       </td>
                       <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                        <input type="text" x-model="rows[i].rhs" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                        <input type="text" x-model="rows[i].rhs" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 min-w-[96px]" placeholder="0">
                       </td>
                     </tr>
                   </template>
@@ -177,7 +177,7 @@
             <div class="mt-2">
               <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('decision.variables')">Decision Variables</h4>
               <template x-for="(v, name) in (result?.solution?.variables ?? {})" :key="name">
-                <div class="flex justify-between text-xs border-b border-slate-100 dark:border-zinc-700 py-1"><span class="font-mono" x-text="formatVariableName(name)"></span><span class="font-mono" x-text="formatNumber(v)"></span></div>
+                <div class="flex justify-between text-xs border-b border-slate-100 dark:border-zinc-700 py-1"><span class="font-mono" x-text="varNames[parseInt(name.replace('x',''))-1] || formatVariableName(name)"></span><span class="font-mono" x-text="formatNumber(v)"></span></div>
               </template>
             </div>
             <div class="mt-3">
@@ -206,7 +206,7 @@
 
         <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="result?.steps?.length">
           <h2 class="text-lg font-bold mb-3" x-text="$store.i18n.t('steps')">Steps</h2>
-          <div id="steps-container" x-html="result?.steps?.length ? renderSteps(result.steps) : ''"></div>
+          <div id="steps-container" x-html="result?.steps?.length ? renderSteps(result.steps, varNames) : ''"></div>
         </div>
 
         <div class="bg-zinc-50 dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-zinc-950/40 border border-zinc-200 dark:border-zinc-700/50 p-6" x-show="result?.graph?.data?.objectives_achieved">
@@ -341,6 +341,7 @@
             this.result = null;
 
             if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+            this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 540, 96));
           } catch (e) {
             this.error = e.message || 'Import failed.';
           }
@@ -350,6 +351,7 @@
           for (const row of this.rows) row.cells.push('');
           this.numCols++;
           this.varNames.push('x' + this.numCols);
+          this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 540, 96));
         },
 
         removeCol() {
@@ -357,6 +359,7 @@
             for (const row of this.rows) row.cells.pop();
             this.numCols--;
             this.varNames.pop();
+            this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 540, 96));
           }
         },
 
@@ -479,12 +482,14 @@
           this.addRow();
           this.addRow();
           this.addRow();
+          this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 540, 96));
         },
 
         init() {
           this.addRow();
           this.addRow();
           this.addRow();
+          this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 540, 96));
         },
       };
     }

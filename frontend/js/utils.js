@@ -1,7 +1,37 @@
 
 
+function syncTableWidth(tableEl, numVars, fixedWidth, varWidth) {
+  if (!tableEl) return;
+  tableEl.style.width = '100%';
+  tableEl.style.minWidth = (fixedWidth + numVars * varWidth) + 'px';
+}
+
 function isDarkMode() {
   return true;
+}
+
+const STEP_DESC_MAP = {
+  'Problem is infeasible': 'step.problem.infeasible',
+  'Problem is unbounded': 'step.problem.unbounded',
+  'Solver did not solve the problem': 'step.solver.not_solved',
+  'Solver encountered a numerical issue': 'step.solver.numerical_issue',
+  'LP relaxation is unbounded': 'step.lp.relaxation.unbounded',
+  'Primal problem is infeasible': 'step.primal.infeasible',
+  'Primal problem is unbounded': 'step.primal.unbounded',
+  'Row reduction: subtract the smallest value in each row from every cell in that row': 'step.row.reduction',
+  'Column reduction: subtract the smallest value in each column from every cell in that column': 'step.col.reduction',
+  'Optimality Check': 'step.optimality.check',
+  'Problem is not optimal, cannot perform sensitivity analysis': 'step.sensitivity.not_optimal',
+  'Computed shadow prices for constraints': 'step.sensitivity.shadow_prices',
+  'Computed reduced costs for variables': 'step.sensitivity.reduced_costs',
+  'Estimated RHS ranges': 'step.sensitivity.rhs_ranges',
+  'Estimated objective coefficient ranges': 'step.sensitivity.obj_ranges',
+};
+
+function translateStepDescription(desc) {
+  if (!desc) return desc;
+  const key = STEP_DESC_MAP[desc];
+  return key ? __t(key, desc) : desc;
 }
 
 function formatNumber(n, decimals) {
@@ -50,6 +80,14 @@ function formatLinearExpressionText(coefficients, variableNames) {
     if (idx === 0) return (part.sign === '-' ? '-' : '') + part.term;
     return ` ${part.sign} ${part.term}`;
   }).join('') || '0';
+}
+
+function remapStepVarNames(text, varNames) {
+  if (!varNames || !varNames.length) return text;
+  return text.replace(/\bx(\d+)\b/g, (match, digits) => {
+    const idx = parseInt(digits, 10) - 1;
+    return (idx >= 0 && idx < varNames.length) ? varNames[idx] : match;
+  });
 }
 
 function formatConstraintEquation(row, variableNames) {
@@ -143,19 +181,21 @@ function renderMatrixWithCover(matrix, coveredRows, coveredCols) {
   return html + legendHtml;
 }
 
-function renderMatrixWithCosts(costs, allocation) {
+function renderMatrixWithCosts(costs, allocation, sourceNames, destNames) {
   if (!costs || !costs.length || !allocation || !allocation.length) return '<p class="text-xs text-slate-500 dark:text-slate-400">'+__t('no.data')+'</p>';
   const rows = costs.length;
   const cols = costs[0] ? costs[0].length : 0;
   let html = '<div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700"><table class="min-w-full text-xs border-collapse bg-white dark:bg-slate-900">';
   html += '<thead><tr><th class="border border-slate-300 dark:border-slate-600 px-2 py-1 bg-slate-100 dark:bg-slate-800"></th>';
   for (let j = 0; j < cols; j++) {
-    html += `<th class="border border-slate-300 dark:border-slate-600 px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold">D${j + 1}</th>`;
+    const name = (destNames && j < destNames.length) ? destNames[j] : `D${j + 1}`;
+    html += `<th class="border border-slate-300 dark:border-slate-600 px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold">${escHtml(name)}</th>`;
   }
   html += '</tr></thead><tbody>';
   for (let i = 0; i < rows; i++) {
     html += '<tr>';
-    html += `<td class="border border-slate-300 dark:border-slate-700 px-2 py-1 font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-800 dark:text-sky-200">S${i + 1}</td>`;
+    const sName = (sourceNames && i < sourceNames.length) ? sourceNames[i] : `S${i + 1}`;
+    html += `<td class="border border-slate-300 dark:border-slate-700 px-2 py-1 font-semibold bg-sky-50 dark:bg-sky-950/40 text-sky-800 dark:text-sky-200">${escHtml(sName)}</td>`;
     for (let j = 0; j < cols; j++) {
       const cost = costs[i] !== undefined && costs[i][j] !== undefined ? costs[i][j] : '';
       const alloc = allocation[i] !== undefined && allocation[i][j] !== undefined ? allocation[i][j] : 0;
@@ -174,19 +214,20 @@ function renderMatrixWithCosts(costs, allocation) {
   return html;
 }
 
-function renderSteps(steps) {
+function renderSteps(steps, varNames) {
   if (!steps || steps.length === 0) return '<p class="text-slate-500 dark:text-slate-400 text-sm">'+__t('no.steps')+'</p>';
   let html = '<div class="space-y-2">';
   steps.forEach((step, idx) => {
     const isOptCheck = step.data && step.data._step_type === 'optimality_check';
-    const stepLabel = isOptCheck ? escHtml(formatMathText(step.description || '')) : `${__t('step')} ${idx + 1}: ${escHtml(formatMathText(step.description || ''))}`;
+    const translatedDesc = translateStepDescription(remapStepVarNames(step.description || '', varNames));
+    const stepLabel = isOptCheck ? escHtml(formatMathText(translatedDesc)) : `${__t('step')} ${idx + 1}: ${escHtml(formatMathText(translatedDesc))}`;
     html += `<details open class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-900">
       <summary class="w-full text-left px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 flex items-center justify-between text-sm font-medium text-slate-800 dark:text-slate-100 transition cursor-pointer list-none [&::-webkit-details-marker]:hidden">
         <span>${stepLabel}</span>
         <svg class="w-4 h-4 transition-transform text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
       </summary>
       <div class="p-4 bg-white dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-300">`;
-    html += renderStepData(step.data);
+    html += renderStepData(step.data, varNames);
     html += `</div></details>`;
   });
   html += '</div>';
@@ -786,8 +827,9 @@ function renderStepType_degeneracy_fix(data) {
     + '</div>';
 }
 
-function renderStepType_simplex_tableau(data) {
+function renderStepType_simplex_tableau(data, varNames) {
   let h = '<div class="space-y-3">';
+  const remap = s => remapStepVarNames(String(s || ''), varNames);
 
   const numVars = data.num_vars || 0;
   const numSlacks = data.num_slacks || 0;
@@ -795,7 +837,8 @@ function renderStepType_simplex_tableau(data) {
 
   let headers = [__t('basis', 'Basis')];
   for (let j = 0; j < numVars; j++) {
-    headers.push(`x<sub>${j + 1}</sub>`);
+    const name = (varNames && j < varNames.length) ? varNames[j] : `x${j + 1}`;
+    headers.push(formatVariableName(name));
   }
   for (let j = 0; j < numSlacks; j++) {
     headers.push(`s<sub>${j + 1}</sub>`);
@@ -824,7 +867,7 @@ function renderStepType_simplex_tableau(data) {
       : (i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-900/70');
 
     h += '<tr>';
-    h += `<td class="border border-slate-300 dark:border-slate-700 px-2 py-1 text-center font-mono ${cls}">${isObjRow ? __t('objective.row') : escHtml(basis[i - 1] || '')}</td>`;
+    h += `<td class="border border-slate-300 dark:border-slate-700 px-2 py-1 text-center font-mono ${cls}">${isObjRow ? __t('objective.row') : escHtml(formatMathText(remap(basis[i - 1] || '')))}</td>`;
 
     for (let j = 0; j < totalVars; j++) {
       const val = tableau[i] != null ? tableau[i][j] : 0;
@@ -844,11 +887,11 @@ function renderStepType_simplex_tableau(data) {
 
   if (data.pivot_col_var) {
     h += '<div class="border-l-2 border-emerald-400 dark:border-emerald-600 pl-3 space-y-1">';
-    h += `<p class="text-xs text-slate-700 dark:text-slate-200"><span class="font-semibold">${__t('pivot.column')}</span> <span class="font-mono text-emerald-700 dark:text-emerald-300">${escHtml(data.pivot_col_var)}</span></p>`;
+    h += `<p class="text-xs text-slate-700 dark:text-slate-200"><span class="font-semibold">${__t('pivot.column')}</span> <span class="font-mono text-emerald-700 dark:text-emerald-300">${escHtml(formatMathText(remap(data.pivot_col_var)))}</span></p>`;
     if (data.pivot_col_reason) {
-      h += `<p class="text-xs text-slate-600 dark:text-slate-400"><span class="font-semibold">${__t('reason')}</span> ${escHtml(data.pivot_col_reason)}</p>`;
+      h += `<p class="text-xs text-slate-600 dark:text-slate-400"><span class="font-semibold">${__t('reason')}</span> ${escHtml(remap(data.pivot_col_reason))}</p>`;
     }
-    h += `<p class="text-xs text-slate-600 dark:text-slate-400"><span class="font-semibold">${__t('entering.variable')}</span> <span class="font-mono text-emerald-600 dark:text-emerald-400">${escHtml(data.entering || data.pivot_col_var)}</span></p>`;
+    h += `<p class="text-xs text-slate-600 dark:text-slate-400"><span class="font-semibold">${__t('entering.variable')}</span> <span class="font-mono text-emerald-600 dark:text-emerald-400">${escHtml(formatMathText(remap(data.entering || data.pivot_col_var)))}</span></p>`;
     h += '</div>';
   }
 
@@ -856,9 +899,9 @@ function renderStepType_simplex_tableau(data) {
     h += '<div class="border-l-2 border-amber-400 dark:border-amber-600 pl-3 space-y-1">';
     h += '<p class="text-xs font-semibold text-slate-700 dark:text-slate-200">' + __t('ratio.test') + '</p>';
     for (const rt of data.ratio_tests) {
-      const label = escHtml(rt.label);
+      const label = escHtml(formatMathText(remap(rt.label)));
       if (rt.skipped) {
-        h += `<p class="text-xs text-slate-500 dark:text-slate-500"><span class="font-mono">${label}</span>: ${__t('ignored')} (${escHtml(rt.reason)})</p>`;
+        h += `<p class="text-xs text-slate-500 dark:text-slate-500"><span class="font-mono">${label}</span>: ${__t('ignored')} (${escHtml(remap(rt.reason))})</p>`;
       } else {
         h += `<p class="text-xs text-slate-600 dark:text-slate-400"><span class="font-mono">${label}</span>: ${formatNumber(rt.rhs, 2)} / ${formatNumber(rt.pivot_col_val, 2)} = <span class="font-medium text-slate-800 dark:text-slate-200">${formatNumber(rt.ratio, 4)}</span></p>`;
       }
@@ -868,11 +911,11 @@ function renderStepType_simplex_tableau(data) {
 
   if (data.pivot_row_label) {
     h += '<div class="border-l-2 border-emerald-400 dark:border-emerald-600 pl-3 space-y-1">';
-    h += `<p class="text-xs text-slate-700 dark:text-slate-200"><span class="font-semibold">${__t('pivot.row')}</span> <span class="font-mono text-emerald-700 dark:text-emerald-300">${escHtml(data.pivot_row_label)}</span></p>`;
+    h += `<p class="text-xs text-slate-700 dark:text-slate-200"><span class="font-semibold">${__t('pivot.row')}</span> <span class="font-mono text-emerald-700 dark:text-emerald-300">${escHtml(formatMathText(remap(data.pivot_row_label)))}</span></p>`;
     if (data.pivot_row_reason) {
-      h += `<p class="text-xs text-slate-600 dark:text-slate-400"><span class="font-semibold">${__t('reason')}</span> ${escHtml(data.pivot_row_reason)}</p>`;
+      h += `<p class="text-xs text-slate-600 dark:text-slate-400"><span class="font-semibold">${__t('reason')}</span> ${escHtml(remap(data.pivot_row_reason))}</p>`;
     }
-    h += `<p class="text-xs text-slate-600 dark:text-slate-400"><span class="font-semibold">${__t('leaving.variable')}</span> <span class="font-mono text-rose-600 dark:text-rose-400">${escHtml(data.leaving || '')}</span></p>`;
+    h += `<p class="text-xs text-slate-600 dark:text-slate-400"><span class="font-semibold">${__t('leaving.variable')}</span> <span class="font-mono text-rose-600 dark:text-rose-400">${escHtml(formatMathText(remap(data.leaving || '')))}</span></p>`;
     h += '</div>';
   }
 
@@ -888,19 +931,21 @@ function renderStepType_simplex_tableau(data) {
   return h;
 }
 
-function renderStepType_optimality_check(data) {
+function renderStepType_optimality_check(data, varNames) {
   let h = '<div class="space-y-3">';
+  const remap = s => remapStepVarNames(String(s || ''), varNames);
 
   const numVars = data.num_vars || 0;
 
   if (data.explanation) {
-    h += `<p class="text-xs text-emerald-700 dark:text-emerald-300 font-medium">${escHtml(data.explanation)}</p>`;
+    h += `<p class="text-xs text-emerald-700 dark:text-emerald-300 font-medium">${escHtml(remap(data.explanation))}</p>`;
   }
 
   if (data.z_row && data.z_row.length) {
     const zHeaders = [];
     for (let j = 0; j < numVars; j++) {
-      zHeaders.push(`x${j + 1}`);
+      const name = (varNames && j < varNames.length) ? varNames[j] : `x${j + 1}`;
+      zHeaders.push(formatVariableName(name));
     }
     for (let j = numVars; j < data.z_row.length; j++) {
       zHeaders.push(`s${j - numVars + 1}`);
@@ -910,17 +955,17 @@ function renderStepType_optimality_check(data) {
   }
 
   if (data.basis_values && data.basis_values.length) {
-    const basisRows = data.basis_values.map((row) => [row.name, formatNumber(row.value, 2)]);
+    const basisRows = data.basis_values.map((row) => [formatMathText(remap(row.name)), formatNumber(row.value, 2)]);
     h += renderTable([__t('variable'), __t('value')], basisRows, __t('basis', 'Basis') + ' ' + __t('variable') + 's');
   }
 
   if (data.variables) {
-    const variableRows = Object.entries(data.variables).map(([name, val]) => [name, formatNumber(val, 2)]);
+    const variableRows = Object.entries(data.variables).map(([name, val]) => [formatVariableName(remap(name)), formatNumber(val, 2)]);
     h += renderTable([__t('variable'), __t('value')], variableRows, __t('decision.variables'));
   }
 
   if (data.constraint_analysis && data.constraint_analysis.length) {
-    const slackRows = data.constraint_analysis.map((row) => [row.constraint, formatNumber(row.slack, 2)]);
+    const slackRows = data.constraint_analysis.map((row) => [remap(row.constraint), formatNumber(row.slack, 2)]);
     h += renderTable([__t('constraint'), __t('slack')], slackRows, __t('slack') + ' ' + __t('value') + 's');
   }
 
@@ -932,8 +977,10 @@ function renderStepType_optimality_check(data) {
   return h;
 }
 
-function renderStepData(data) {
+function renderStepData(data, varNames) {
   if (!data || Object.keys(data).length === 0) return '<p class="text-slate-400 dark:text-slate-500">'+__t('no.additional.data')+'</p>';
+
+  const remap = s => remapStepVarNames(String(s || ''), varNames);
 
   if (data._step_type) {
     switch (data._step_type) {
@@ -949,8 +996,8 @@ function renderStepData(data) {
       case 'nwcorner_initial': return renderStepType_nwcorner_initial(data);
       case 'nwcorner_iteration': return renderStepType_nwcorner_iteration(data);
       case 'degeneracy_fix': return renderStepType_degeneracy_fix(data);
-      case 'simplex_tableau': return renderStepType_simplex_tableau(data);
-      case 'optimality_check': return renderStepType_optimality_check(data);
+      case 'simplex_tableau': return renderStepType_simplex_tableau(data, varNames);
+      case 'optimality_check': return renderStepType_optimality_check(data, varNames);
     }
   }
 
@@ -963,7 +1010,7 @@ function renderStepData(data) {
       html += renderMatrix(val);
       html += '</div>';
     } else if (key === 'variables' || key === 'dual_variables') {
-      const rows = Object.entries(val).map(([k, v]) => [formatVariableName(k), formatNumber(v, 4)]);
+      const rows = Object.entries(val).map(([k, v]) => [formatVariableName(remap(k)), formatNumber(v, 4)]);
       html += renderTable([__t('variable'), __t('value')], rows, key);
     } else if (key === 'row_penalties' || key === 'col_penalties' || key === 'supply_remaining' || key === 'demand_remaining') {
       html += `<div>${label} <span class="text-slate-600 dark:text-slate-300">${escHtml(JSON.stringify(val))}</span></div>`;
@@ -973,8 +1020,8 @@ function renderStepData(data) {
       html += '</div>';
     } else if (key === 'shadow_prices' || key === 'reduced_costs') {
       const rows = val.map(v => {
-        if (v.variable) return [formatVariableName(v.variable), formatNumber(v.value, 4)];
-        if (v.name) return [formatVariableName(v.name), formatNumber(v.value, 4)];
+        if (v.variable) return [formatVariableName(remap(v.variable)), formatNumber(v.value, 4)];
+        if (v.name) return [formatVariableName(remap(v.name)), formatNumber(v.value, 4)];
         return [JSON.stringify(v), ''];
       });
       html += renderTable([__t('item'), __t('value')], rows, key);

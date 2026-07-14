@@ -1,6 +1,13 @@
 import copy
 
 
+def _fmt_num(x):
+    num = float(x)
+    if num == int(num):
+        return str(int(num))
+    return f"{num:.2f}"
+
+
 def _solve_uv(allocation, costs, m, n):
     u = [None] * m
     v = [None] * n
@@ -236,7 +243,7 @@ def solve_modi(allocation, costs, supply, demand, prior_steps):
         steps.append(
             _make_step(
                 f"MODI iteration {iteration + 1}: Enter (row {ei}, col {ej}) "
-                f"d={min_d:.4f}  theta={theta:.4f}",
+                f"d={_fmt_num(min_d)}  theta={_fmt_num(theta)}",
                 loop_path=loop,
                 theta=theta,
                 allocation_after=[row[:] for row in new_alloc],

@@ -100,23 +100,23 @@
           </div>
 
           <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-700">
-            <table class="w-full text-xs border-collapse bg-white dark:bg-zinc-800">
+            <table x-ref="inputTable" class="w-full text-xs border-collapse bg-white dark:bg-zinc-800">
               <thead>
                 <tr class="bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200">
-                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24" x-text="$store.i18n.t('source.dest.header')">Source \ Dest</th>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-44 min-w-[176px]" x-text="$store.i18n.t('source.dest.header')">Source \ Dest</th>
                   <template x-for="(_, j) in Array(numCols).fill()" :key="j">
-                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium w-20 min-w-[80px]">
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium w-[100px] min-w-[100px]">
                       <input type="text" x-model="destNames[j]" class="w-full px-1 py-1 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded" placeholder="D">
                     </th>
                   </template>
-                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('supply')">Supply</th>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20 min-w-[80px]" x-text="$store.i18n.t('supply')">Supply</th>
                 </tr>
               </thead>
               <tbody>
                 <template x-for="(_, i) in Array(numRows).fill()" :key="i">
                   <tr>
                     <td class="border border-slate-300 dark:border-zinc-700 p-0 bg-slate-50 dark:bg-zinc-800/70">
-                      <input type="text" x-model="sourceNames[i]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded" placeholder="S">
+                      <input type="text" x-model="sourceNames[i]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded min-w-[176px]" placeholder="S">
                     </td>
                     <template x-for="(_, j) in Array(numCols).fill()" :key="j">
                       <td class="border border-slate-300 dark:border-zinc-700 p-0">
@@ -173,7 +173,7 @@
             <p><span class="font-semibold" x-text="$store.i18n.t('total.cost')">Total Cost:</span> <span class="text-lg font-bold text-indigo-600 dark:text-indigo-400" x-text="formatNumber(result?.solution?.total_cost)"></span></p>
             <div class="mt-2">
               <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('optimal.allocation')">Optimal Allocation</h4>
-              <div x-html="result?.solution?.allocation && result?.solution?.costs ? renderMatrixWithCosts(result.solution.costs, result.solution.allocation) : (result?.solution?.allocation ? renderMatrix(result.solution.allocation) : '')"></div>
+              <div x-html="result?.solution?.allocation && result?.solution?.costs ? renderMatrixWithCosts(result.solution.costs, result.solution.allocation, sourceNames, destNames) : (result?.solution?.allocation ? renderMatrix(result.solution.allocation) : '')"></div>
             </div>
           </div>
         </div>
@@ -192,12 +192,12 @@
       return {
         method: 'vogel',
         numRows: 3,
-        numCols: 2,
+        numCols: 3,
         supply: ['', '', ''],
-        demand: ['', ''],
-        costs: [['', ''], ['', ''], ['', '']],
+        demand: ['', '', ''],
+        costs: [['', '', ''], ['', '', ''], ['', '', '']],
         sourceNames: ['Source 1', 'Source 2', 'Source 3'],
-        destNames: ['Destination 1', 'Destination 2'],
+        destNames: ['Destination 1', 'Destination 2', 'Destination 3'],
         loading: false,
         result: null,
         error: '',
@@ -226,7 +226,14 @@
             const input = await importProblemFromFile(event, null, validateTransportationProblemInput);
             if (!input) return;
             applyTransportationProblemInput(this, input);
+            if (!Array.isArray(this.destNames) || this.destNames.length !== this.numCols) {
+              this.destNames = Array.from({ length: this.numCols }, (_, j) => 'Destination ' + (j + 1));
+            }
+            if (!Array.isArray(this.sourceNames) || this.sourceNames.length !== this.numRows) {
+              this.sourceNames = Array.from({ length: this.numRows }, (_, i) => 'Source ' + (i + 1));
+            }
             this.result = null;
+            this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 420, 100));
           } catch (e) {
             this.error = e.message || 'Import failed.';
           }
@@ -251,6 +258,7 @@
           for (const row of this.costs) row.push('');
           this.destNames.push('Destination ' + (this.numCols + 1));
           this.numCols = this.demand.length;
+          this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 420, 100));
         },
         removeCol() {
           if (this.numCols > 1) {
@@ -258,6 +266,7 @@
             for (const row of this.costs) row.pop();
             this.destNames.pop();
             this.numCols = this.demand.length;
+            this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 420, 100));
           }
         },
 
@@ -297,17 +306,19 @@
           this.destNames = t.demand.map((_, j) => 'Destination ' + (j + 1));
           this.numRows = this.supply.length;
           this.numCols = this.demand.length;
+          this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 420, 100));
         },
 
         init() {
-          const t = createTransportTableState(3, 2);
+          const t = createTransportTableState(3, 3);
           this.supply = t.supply;
           this.demand = t.demand;
           this.costs = t.costs;
           this.sourceNames = ['Source 1', 'Source 2', 'Source 3'];
-          this.destNames = ['Destination 1', 'Destination 2'];
+          this.destNames = ['Destination 1', 'Destination 2', 'Destination 3'];
           this.numRows = this.supply.length;
           this.numCols = this.demand.length;
+          this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 420, 100));
         },
       };
     }

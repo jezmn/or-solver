@@ -127,9 +127,9 @@ function applyLpProblemInput(table, input) {
   validateLpProblemInput(input);
   table.cols = input.objective.length;
   table.numVars = table.cols;
-  if (input.varNames) {
-    table.varNames = input.varNames.map(String);
-  }
+  table.varNames = Array.isArray(input.varNames) && input.varNames.length >= table.numVars
+    ? input.varNames.map(String)
+    : Array.from({ length: table.numVars }, (_, i) => (input.varNames && input.varNames[i]) ? String(input.varNames[i]) : 'x' + (i + 1));
   table.rows = [
     { cells: input.objective.map(inputValue), label: '' },
     ...input.constraints.map((row, idx) => ({
@@ -236,10 +236,11 @@ function applyGoalProblemInput(goalTable, constraintTable, input) {
     rhs: inputValue(input.rhs[idx]),
     label: (input.labels && input.labels[idx]) ? String(input.labels[idx]) : '',
   }));
-  if (input.varNames) {
-    goalTable.varNames = input.varNames.map(String);
-    constraintTable.varNames = input.varNames.map(String);
-  }
+  const paddedVarNames = Array.isArray(input.varNames) && input.varNames.length >= varCount
+    ? input.varNames.map(String)
+    : Array.from({ length: varCount }, (_, i) => (input.varNames && input.varNames[i]) ? String(input.varNames[i]) : 'x' + (i + 1));
+  goalTable.varNames = paddedVarNames;
+  constraintTable.varNames = paddedVarNames;
 }
 
 function getTransportationProblemInput(page) {
@@ -270,12 +271,12 @@ function applyTransportationProblemInput(page, input) {
   page.costs = input.costs.map((row) => row.map(inputValue));
   page.supply = input.supply.map(inputValue);
   page.demand = input.demand.map(inputValue);
-  if (input.sourceNames) {
-    page.sourceNames = input.sourceNames.map(String);
-  }
-  if (input.destNames) {
-    page.destNames = input.destNames.map(String);
-  }
+  page.sourceNames = Array.isArray(input.sourceNames) && input.sourceNames.length >= page.numRows
+    ? input.sourceNames.map(String)
+    : Array.from({ length: page.numRows }, (_, i) => (input.sourceNames && input.sourceNames[i]) ? String(input.sourceNames[i]) : 'Source ' + (i + 1));
+  page.destNames = Array.isArray(input.destNames) && input.destNames.length >= page.numCols
+    ? input.destNames.map(String)
+    : Array.from({ length: page.numCols }, (_, j) => (input.destNames && input.destNames[j]) ? String(input.destNames[j]) : 'Destination ' + (j + 1));
 }
 
 function getAssignmentProblemInput(page) {
@@ -304,16 +305,12 @@ function applyAssignmentProblemInput(page, input) {
   page.matrix = input.cost_matrix.map((row) => row.map(inputValue));
   if (input.optimization !== undefined) page.optimization = input.optimization;
   else if (input.minimize !== undefined) page.optimization = input.minimize ? 'min' : 'max';
-  if (input.rowNames) {
-    page.rowNames = input.rowNames.map(String);
-  } else {
-    page.rowNames = Array.from({ length: page.numRows }, (_, i) => 'Job ' + (i + 1));
-  }
-  if (input.colNames) {
-    page.colNames = input.colNames.map(String);
-  } else {
-    page.colNames = Array.from({ length: page.numCols }, (_, j) => 'Machine ' + (j + 1));
-  }
+  page.rowNames = Array.isArray(input.rowNames) && input.rowNames.length >= page.numRows
+    ? input.rowNames.map(String)
+    : Array.from({ length: page.numRows }, (_, i) => (input.rowNames && input.rowNames[i]) ? String(input.rowNames[i]) : 'Job ' + (i + 1));
+  page.colNames = Array.isArray(input.colNames) && input.colNames.length >= page.numCols
+    ? input.colNames.map(String)
+    : Array.from({ length: page.numCols }, (_, j) => (input.colNames && input.colNames[j]) ? String(input.colNames[j]) : 'Machine ' + (j + 1));
 }
 
 function validateNumericMatrix(matrix) {

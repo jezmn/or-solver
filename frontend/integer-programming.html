@@ -106,32 +106,32 @@
           </div>
 
           <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-700">
-            <table class="w-full text-xs border-collapse bg-white dark:bg-zinc-800">
+            <table x-ref="inputTable" class="w-full text-xs border-collapse bg-white dark:bg-zinc-800">
               <thead>
                 <tr class="bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200">
-                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24" x-text="$store.i18n.t('name')">Name</th>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-44 min-w-[176px]" x-text="$store.i18n.t('name')">Name</th>
                   <template x-for="(_, i) in Array(table.cols).fill()" :key="i">
-                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20 min-w-[80px]">
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24 min-w-[112px]">
                       <input type="text" x-model="table.varNames[i]" class="w-full px-1 py-1 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded" placeholder="x">
                     </th>
                   </template>
                   <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-16" x-text="$store.i18n.t('sign')">Sign</th>
-                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-20" x-text="$store.i18n.t('rhs')">RHS</th>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24 min-w-[96px]" x-text="$store.i18n.t('rhs')">RHS</th>
                   <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-48" x-text="$store.i18n.t('equation')">Equation</th>
                 </tr>
                 <tr class="text-[10px] text-zinc-400 dark:text-zinc-500 italic border-0">
                   <td colspan="100" class="px-2 py-1 text-center border-0" x-text="$store.i18n.t('int.mixed.mode.hint')">Uncheck to treat variable as continuous (mixed-integer mode)</td>
                 </tr>
                 <tr class="bg-amber-50 dark:bg-amber-950/30 text-slate-600 dark:text-zinc-400">
-                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1 text-center text-[10px] font-medium" x-text="$store.i18n.t('int.column')">Int?</th>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1 text-center text-[10px] font-medium w-44 min-w-[176px]" x-text="$store.i18n.t('int.column')">Int?</th>
                   <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
-                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1 text-center">
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1 text-center w-24 min-w-[112px]">
                       <input type="checkbox" x-model="intVars[j]" class="w-3.5 h-3.5 accent-indigo-600 dark:accent-indigo-400 cursor-pointer">
                     </th>
                   </template>
-                  <th class="border border-slate-300 dark:border-zinc-700"></th>
-                  <th class="border border-slate-300 dark:border-zinc-700"></th>
-                  <th class="border border-slate-300 dark:border-zinc-700"></th>
+                  <th class="border border-slate-300 dark:border-zinc-700 w-16"></th>
+                  <th class="border border-slate-300 dark:border-zinc-700 w-24 min-w-[96px]"></th>
+                  <th class="border border-slate-300 dark:border-zinc-700 w-48"></th>
                 </tr>
               </thead>
               <tbody>
@@ -139,7 +139,7 @@
                   <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center text-xs font-medium text-slate-500 dark:text-zinc-400 bg-indigo-50 dark:bg-indigo-950/40" x-text="optimization === 'max' ? $store.i18n.t('maximize') : $store.i18n.t('minimize')"></td>
                   <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
                     <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                      <input type="text" x-model="table.rows[0].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-indigo-100 dark:focus:bg-indigo-950/60 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                      <input type="text" x-model="table.rows[0].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-indigo-100 dark:focus:bg-indigo-950/60 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 min-w-[112px]" placeholder="0">
                     </td>
                   </template>
                   <td class="border border-slate-300 dark:border-zinc-700 p-0 text-center text-slate-500 dark:text-zinc-400 text-xs bg-indigo-50 dark:bg-indigo-950/40" x-text="$store.i18n.t('objective.label')">obj</td>
@@ -149,11 +149,11 @@
                 <template x-for="(row, i) in table.rows.slice(1)" :key="i">
                   <tr>
                     <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                      <input type="text" x-model="row.label" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 text-xs focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400" :placeholder="$store.i18n.t('constraint')">
+                      <input type="text" x-model="row.label" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 text-xs focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 min-w-[176px]" :placeholder="$store.i18n.t('constraint')">
                     </td>
                     <template x-for="(_, j) in Array(table.cols).fill()" :key="j">
                       <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                        <input type="text" x-model="table.rows[i + 1].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                        <input type="text" x-model="table.rows[i + 1].cells[j]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 min-w-[112px]" placeholder="0">
                       </td>
                     </template>
                     <td class="border border-slate-300 dark:border-zinc-700 p-0">
@@ -164,7 +164,7 @@
                       </select>
                     </td>
                     <td class="border border-slate-300 dark:border-zinc-700 p-0">
-                      <input type="text" x-model="table.rows[i + 1].rhs" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500" placeholder="0">
+                      <input type="text" x-model="table.rows[i + 1].rhs" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-500 focus:bg-slate-100 dark:focus:bg-zinc-700 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 min-w-[96px]" placeholder="0">
                     </td>
                     <td class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center text-xs font-mono text-slate-500 dark:text-zinc-400" x-text="formatEquation(row)"></td>
                   </tr>
@@ -215,7 +215,7 @@
             <div class="mt-2">
               <h4 class="font-semibold text-sm mb-1" x-text="$store.i18n.t('decision.variables')">Decision Variables</h4>
               <template x-for="(v, name) in (result?.solution?.variables ?? {})" :key="name">
-                <div class="flex justify-between text-xs border-b border-slate-100 dark:border-zinc-700 py-1"><span class="font-mono" x-text="formatVariableName(name)"></span><span class="font-mono" x-text="formatNumber(v, 0)"></span></div>
+                <div class="flex justify-between text-xs border-b border-slate-100 dark:border-zinc-700 py-1"><span class="font-mono" x-text="table.varNames[parseInt(name.replace('x',''))-1] || formatVariableName(name)"></span><span class="font-mono" x-text="formatNumber(v, 0)"></span></div>
               </template>
             </div>
           </div>
@@ -381,6 +381,7 @@
             const tree = document.getElementById('plotly-tree');
             if (tree) tree.innerHTML = '';
             if (this.chartInstance) { this.chartInstance.destroy(); this.chartInstance = null; }
+            this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.table.cols, 350, 112));
           } catch (e) {
             this.error = e.message || 'Import failed.';
           }
@@ -427,11 +428,18 @@
         renderIntegerSteps(steps) {
           if (!steps || steps.length === 0) return '<p class="text-slate-500 dark:text-slate-400 text-sm">' + Alpine.store('i18n').t('no.steps') + '</p>';
 
-          const formatExpr = coeffs => formatLinearExpressionText(coeffs);
+          const varNames = this.table ? this.table.varNames : null;
+          const remap = text => remapStepVarNames(String(text || ''), varNames);
+
+          const formatExpr = coeffs => formatLinearExpressionText(coeffs, varNames);
 
           const formatValues = values => Object.entries(values || {})
             .sort(([a], [b]) => Number(a.slice(1)) - Number(b.slice(1)))
-            .map(([name, value]) => `${formatVariableName(name)}=${formatNumber(value)}`)
+            .map(([name, value]) => {
+              const idx = parseInt(name.replace('x', ''), 10) - 1;
+              const displayName = (varNames && idx >= 0 && idx < varNames.length) ? varNames[idx] : name;
+              return `${formatVariableName(displayName)}=${formatNumber(value)}`;
+            })
             .join(', ');
 
           const summaryRow = (label, value) => `
@@ -496,19 +504,19 @@
             const data = step.data || {};
             let branchHtml = '';
             if (data.inherited_constraints && data.inherited_constraints.length) {
-              branchHtml += summaryRow('Inherited branch constraints:', data.inherited_constraints.join(', '));
+              branchHtml += summaryRow('Inherited branch constraints:', data.inherited_constraints.map(remap).join(', '));
             }
             if (data.new_constraint) {
-              branchHtml += summaryRow('New branch constraint:', data.new_constraint);
+              branchHtml += summaryRow('New branch constraint:', remap(data.new_constraint));
             }
 
             let calcExtra = '';
             if (data.redundancy_notes && data.redundancy_notes.length) {
-              calcExtra += `<div class="text-xs text-zinc-500 dark:text-zinc-400">${escHtml(data.redundancy_notes.join('; '))}</div>`;
+              calcExtra += `<div class="text-xs text-zinc-500 dark:text-zinc-400">${escHtml(data.redundancy_notes.map(remap).join('; '))}</div>`;
             }
 
             if (data.simplified_constraints && data.simplified_constraints.length) {
-              branchHtml += summaryRow('Simplified branch constraints:', data.simplified_constraints.join(', '));
+              branchHtml += summaryRow('Simplified branch constraints:', data.simplified_constraints.map(remap).join(', '));
             }
 
             const lpResult = data.lp_status && data.lp_status !== 'Optimal'
@@ -517,14 +525,14 @@
             return `
               <div class="border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 p-4 text-sm">
                 <div class="flex items-start justify-between gap-3 mb-3">
-                  <h3 class="font-semibold text-slate-900 dark:text-slate-50">${escHtml(data.node_name || `Step ${idx + 1}`)}</h3>
+                  <h3 class="font-semibold text-slate-900 dark:text-slate-50">${escHtml(remap(data.node_name || `Step ${idx + 1}`))}</h3>
                   <span class="text-xs text-slate-500 dark:text-slate-400">Step ${idx + 1}</span>
                 </div>
                 <dl class="space-y-2">
                   ${branchHtml}
                   ${summaryRow('LP relaxation result:', lpResult)}
                   ${summaryRow('Integer check:', data.integer_check || 'checked')}
-                  ${summaryRow('Decision:', data.decision || step.description || 'completed')}
+                  ${summaryRow('Decision:', remap(data.decision || step.description || 'completed'))}
                 </dl>
                 ${calculationDetails(data.calculations, calcExtra)}
               </div>`;
@@ -535,28 +543,33 @@
             let lines = [];
             let extraHtml = '';
             if (data.objective && data.constraints) {
-              const intText = (data.integer_variables || []).length ? data.integer_variables.map(formatVariableName).join(', ') : 'none';
+              const var0 = varNames && varNames[0] ? formatVariableName(varNames[0]) : 'x₁';
+              const var1 = varNames && varNames[1] ? formatVariableName(varNames[1]) : 'x₂';
+              const intText = (data.integer_variables || []).length ? data.integer_variables.map(v => {
+                const idx = parseInt(String(v).replace('x', ''), 10) - 1;
+                return formatVariableName((varNames && idx >= 0 && idx < varNames.length) ? varNames[idx] : v);
+              }).join(', ') : 'none';
               lines = [
                 `Objective: Z = ${formatExpr(data.objective)} (${this.optimization}imize).`,
                 `LP relaxation: ignore integrality temporarily; integer variables are ${intText}.`,
-                'Graph setup: set x2=0 for the x1 intercept, then set x1=0 for the x2 intercept.',
+                `Graph setup: set ${var1}=0 for the ${var0} intercept, then set ${var0}=0 for the ${var1} intercept.`,
               ];
               if (data.intercepts && data.intercepts.length) {
-                extraHtml = renderTable(['Constraint', 'Equation', 'x2 = 0', 'x1 = 0'], data.intercepts, 'Graph intercepts');
+                extraHtml = renderTable(['Constraint', 'Equation', `${var1} = 0`, `${var0} = 0`], data.intercepts, 'Graph intercepts');
               }
             } else if (data.variables && data.optimal_value !== undefined) {
               lines = [`Final integer solution: ${formatValues(data.variables)}, Z=${formatNumber(data.optimal_value)}.`];
             } else if (data.nodes_explored !== undefined) {
               lines = [`Nodes explored: ${data.nodes_explored}.`];
             } else {
-              lines = [step.description || 'Step completed.'];
+              lines = [remap(step.description) || 'Step completed.'];
             }
 
             return `
               <div class="border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 p-4 text-sm">
                 <div class="flex items-start justify-between gap-3 mb-2">
                   <h3 class="font-semibold text-slate-900 dark:text-slate-50">Step ${idx + 1}</h3>
-                  <span class="text-xs text-slate-500 dark:text-slate-400">${escHtml(formatMathText(step.description || ''))}</span>
+                  <span class="text-xs text-slate-500 dark:text-slate-400">${escHtml(formatMathText(remap(step.description || '')))}</span>
                 </div>
                 <ul class="list-disc pl-5 space-y-1 text-slate-700 dark:text-slate-300">
                   ${lines.map(line => `<li>${escHtml(formatMathText(line))}</li>`).join('')}
@@ -800,6 +813,8 @@
           this.intVars = [true, true];
           for (let i = 1; i < this.table.rows.length; i++) this.table.rows[i].label = 'Constraint ' + i;
           this._wrapAddRow();
+          this._wrapColMethods();
+          this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.table.cols, 350, 112));
         },
 
         init() {
@@ -807,6 +822,8 @@
           this.intVars = [true, true];
           for (let i = 1; i < this.table.rows.length; i++) this.table.rows[i].label = 'Constraint ' + i;
           this._wrapAddRow();
+          this._wrapColMethods();
+          this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.table.cols, 350, 112));
         },
 
         _wrapAddRow() {
@@ -816,6 +833,14 @@
             orig();
             self.table.rows[self.table.rows.length - 1].label = 'Constraint ' + (self.table.rows.length - 1);
           };
+        },
+
+        _wrapColMethods() {
+          const origAdd = this.table.addCol.bind(this.table);
+          const origRemove = this.table.removeCol.bind(this.table);
+          const self = this;
+          this.table.addCol = function () { origAdd(); self.syncIntVars(); syncTableWidth(self.$refs.inputTable, self.table.cols, 350, 112); };
+          this.table.removeCol = function () { origRemove(); self.syncIntVars(); syncTableWidth(self.$refs.inputTable, self.table.cols, 350, 112); };
         },
       };
     }

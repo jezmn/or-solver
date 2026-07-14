@@ -104,12 +104,12 @@
           </div>
 
           <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-700">
-            <table class="w-full text-xs border-collapse bg-white dark:bg-zinc-800">
+            <table x-ref="inputTable" class="w-full text-xs border-collapse bg-white dark:bg-zinc-800">
               <thead>
                 <tr class="bg-slate-100 dark:bg-zinc-700 text-slate-700 dark:text-zinc-200">
-                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-24" x-text="$store.i18n.t('job.machine.header')">Job \ Machine</th>
+                  <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium text-slate-600 dark:text-zinc-300 w-44 min-w-[176px]" x-text="$store.i18n.t('job.machine.header')">Job \ Machine</th>
                   <template x-for="(_, j) in Array(numCols).fill()" :key="j">
-                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium w-20 min-w-[80px]">
+                    <th class="border border-slate-300 dark:border-zinc-700 px-2 py-1.5 text-center font-medium w-[100px] min-w-[100px]">
                       <input type="text" x-model="colNames[j]" class="w-full px-1 py-1 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded">
                     </th>
                   </template>
@@ -119,7 +119,7 @@
                   <template x-for="(_, i) in Array(numRows).fill()" :key="i">
                   <tr>
                     <td class="border border-slate-300 dark:border-zinc-700 p-0 bg-slate-50 dark:bg-zinc-800/70">
-                      <input type="text" x-model="rowNames[i]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded">
+                      <input type="text" x-model="rowNames[i]" class="w-full px-2 py-1.5 text-center bg-transparent border-0 outline-none text-slate-800 dark:text-zinc-100 text-xs font-mono focus:bg-slate-100 dark:focus:bg-zinc-700 rounded min-w-[176px]">
                     </td>
                     <template x-for="(_, j) in Array(numCols).fill()" :key="j">
                       <td class="border border-slate-300 dark:border-zinc-700 p-0">
@@ -229,6 +229,7 @@
             this.result = null;
 
             this.graphHtml = '';
+            this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 220, 100));
           } catch (e) {
             this.error = e.message || 'Import failed.';
           }
@@ -249,12 +250,14 @@
           for (const row of this.matrix) row.push('');
           this.colNames.push('Machine ' + (this.numCols + 1));
           this.numCols = this.matrix.length > 0 ? this.matrix[0].length : 0;
+          this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 220, 100));
         },
         removeCol() {
           if (this.numCols > 1) {
             for (const row of this.matrix) row.pop();
             this.colNames.pop();
             this.numCols = this.matrix.length > 0 ? this.matrix[0].length : 0;
+            this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 220, 100));
           }
         },
 
@@ -346,6 +349,7 @@
           this.colNames = (this.matrix[0] || []).map((_, j) => 'Machine ' + (j + 1));
           this.numRows = this.matrix.length;
           this.numCols = this.matrix[0].length;
+          this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 220, 100));
         },
 
         init() {
@@ -355,6 +359,7 @@
           this.colNames = ['Machine 1', 'Machine 2', 'Machine 3'];
           this.numRows = this.matrix.length;
           this.numCols = this.matrix[0].length;
+          this.$nextTick(() => syncTableWidth(this.$refs.inputTable, this.numCols, 220, 100));
         },
       };
     }
