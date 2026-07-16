@@ -2,6 +2,8 @@
 
 Simple Operations Research solver via web with interactive step-by-step solutions.
 
+**Live Demo:** [or-solver.arnebin.dev](https://or-solver.arnebin.dev)
+
 ## Solver Methods
 
 - **Linear Programming** — Simplex method with graphical feasible region
