@@ -1,4 +1,4 @@
-FROM node:20-slim AS css-builder
+FROM node:24-slim AS css-builder
 WORKDIR /app
 COPY package.json package-lock.json tailwind.config.js input.css ./
 COPY frontend ./frontend
