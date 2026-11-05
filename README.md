@@ -4,14 +4,16 @@ Simple Operations Research solver via web with interactive step-by-step solution
 
 **Live Demo:** [or-solver.arnebin.dev](https://or-solver.arnebin.dev)
 
+> **Note:** Educational prototype. No further development planned.
+
 ## Solver Methods
 
-- **Linear Programming** — Simplex method with graphical feasible region
-- **Integer Programming** — Branch and bound with tree visualization
-- **Transportation** — Vogel Approximation and Northwest Corner methods
-- **Assignment** — Hungarian algorithm with cost matrix visualization
-- **Goal Programming** — Multi-objective optimization
-- **Sensitivity Analysis** — Dual values and shadow prices
+- **Linear Programming**: Simplex method with graphical feasible region
+- **Integer Programming**: Branch and bound with tree visualization
+- **Transportation**: Vogel Approximation and Northwest Corner methods
+- **Assignment**: Hungarian algorithm with cost matrix visualization
+- **Goal Programming**: Multi-objective optimization
+- **Sensitivity Analysis**: Dual values and shadow prices
 
 ## Stack
 
@@ -22,8 +24,8 @@ Simple Operations Research solver via web with interactive step-by-step solution
 ## Quick Start
 
 ```cmd
-npm install
-npm run css
+pnpm install
+pnpm run css
 pip install -r requirements.txt
 python -m uvicorn backend.main:app
 ```
@@ -43,4 +45,3 @@ Open `http://localhost:8000` in your browser.
 | POST | `/api/sensitivity` | Sensitivity analysis |
 | POST | `/api/dual` | Dual formulation |
 | GET | `/api/health` | Health check |
-
