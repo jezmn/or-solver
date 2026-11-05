@@ -1,0 +1,14 @@
+[tool.ruff]
+line-length = 210  # step-description f-strings in solvers are long by nature
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.pyright]
+include = ["backend", "tests"]
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "basic"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
