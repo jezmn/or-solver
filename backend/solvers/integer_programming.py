@@ -1,6 +1,6 @@
-import pulp
 import math
-from copy import deepcopy
+
+import pulp
 
 
 def _find_fractional_var(vals, integer_vars):
@@ -232,55 +232,37 @@ def _active_constraint_solution_lines(constraints, rhs, variables):
         )
 
     remaining = list(system)
-    solved = [None] * n_vars
+    solved_vars: set[int] = set()
     elimination_steps = []
 
     step = 1
     while remaining:
-        best_dist = float("inf")
-        best_eq = None
-        best_var = None
-        best_coeff = None
-        best_row = None
+        best = None
 
         for eq_idx, row, const in remaining:
             for vi in range(n_vars):
-                if solved[vi] is not None:
+                if vi in solved_vars:
                     continue
                 c = row[vi]
                 if abs(c) < 1e-9:
                     continue
                 dist = abs(abs(c) - 1)
-                if dist < best_dist:
-                    best_dist = dist
-                    best_eq = eq_idx
-                    best_var = vi
-                    best_coeff = c
-                    best_row = (row, const)
+                if best is None or dist < best[0]:
+                    best = (dist, eq_idx, vi, c, row, const)
 
-        if best_eq is None:
+        if best is None:
             break
 
-        row, const = best_row
+        _, best_eq, best_var, best_coeff, row, const = best
         var_name = f"x{best_var + 1}"
         remaining_exprs = []
         for vi in range(n_vars):
-            if solved[vi] is not None or vi == best_var:
+            if vi in solved_vars or vi == best_var:
                 continue
             c = row[vi]
             if abs(c) < 1e-9:
                 continue
             remaining_exprs.append((c, vi))
-
-        if remaining_exprs:
-            terms = []
-            for c, vi in remaining_exprs:
-                if abs(c / best_coeff) > 1e-9:
-                    t = _fmt_term_val(c / best_coeff, f"x{vi + 1}")
-                    terms.append(t)
-            iso_expr = _join_terms(terms, const / best_coeff)
-        else:
-            iso_expr = _fmt_num(const / best_coeff)
 
         if abs(best_coeff - 1) < 1e-9:
             if not remaining_exprs:
@@ -306,7 +288,7 @@ def _active_constraint_solution_lines(constraints, rhs, variables):
         elimination_steps.append(
             (best_eq, best_var, best_coeff, const, remaining_exprs, elim_line)
         )
-        solved[best_var] = (best_eq, best_coeff, const, remaining_exprs)
+        solved_vars.add(best_var)
         remaining = [(eq_idx, r, c) for eq_idx, r, c in remaining if eq_idx != best_eq]
         step += 1
 
@@ -314,7 +296,6 @@ def _active_constraint_solution_lines(constraints, rhs, variables):
 
     for subst_idx in range(len(elimination_steps) - 1):
         prev_var = elimination_steps[subst_idx][1]
-        pe, pc, pconst, pexprs = solved[prev_var]
         cur_step = elimination_steps[subst_idx + 1]
         cur_eq, cur_var, cur_coeff, cur_const, cur_exprs, cur_line = cur_step
         cur_name = f"x{cur_var + 1}"
@@ -334,7 +315,7 @@ def _active_constraint_solution_lines(constraints, rhs, variables):
                 subst_parts.append(f"{_fmt_num(c)}({_fmt_num(prev_val)})")
             elif vi == cur_var:
                 subst_parts.append(f"{_fmt_num(c)}{vn}")
-            elif solved[vi] is not None:
+            elif vi in solved_vars:
                 subst_parts.append(f"{_fmt_num(c)}({_fmt_num(variables.get(vn, 0))})")
         rhs_val = rhs[cur_eq]
         lines.append(" + ".join(subst_parts) + f" = {_fmt_num(rhs_val)}")
@@ -373,18 +354,9 @@ def _fmt_term_val(coeff, name):
     )
 
 
-def _join_terms(terms, const_val=0):
-    if not terms:
-        return _fmt_num(const_val)
-    result = _fmt_num(const_val) if abs(const_val) > 1e-9 else ""
-    for t in terms:
-        result += t
-    return result if result else "0"
-
-
 def _collect_active(constraints, rhs, variables, n_vars):
     active = []
-    for idx, (row, bound) in enumerate(zip(constraints, rhs)):
+    for idx, (row, bound) in enumerate(zip(constraints, rhs, strict=True)):
         lhs = sum(
             row[j] * variables.get(f"x{j + 1}", 0) for j in range(min(n_vars, len(row)))
         )
@@ -394,7 +366,7 @@ def _collect_active(constraints, rhs, variables, n_vars):
 
 
 def _active_constraint_pairs(constraints, rhs, variables):
-    for idx, (row, bound) in enumerate(zip(constraints, rhs)):
+    for idx, (row, bound) in enumerate(zip(constraints, rhs, strict=True)):
         lhs = sum(
             row[j] * variables.get(f"x{j + 1}", 0) for j in range(min(2, len(row)))
         )
@@ -479,7 +451,7 @@ def _bound_solution_lines(constraints, signs, rhs, variables, fixed_vars, bounds
         actual = variables.get(solve_name)
         candidates = []
 
-        for idx, (row, sign, bound) in enumerate(zip(constraints, signs, rhs)):
+        for idx, (row, sign, bound) in enumerate(zip(constraints, signs, rhs, strict=True)):
             if abs(row[solve_idx]) < 1e-9:
                 continue
             remaining = float(bound)
@@ -727,13 +699,13 @@ def _satisfies(lhs, sign, bound):
 def _build_feasible_graph(
     objective, constraints, signs, rhs, lp_vars=None, int_vars=None
 ):
-    graph = {"type": "chart", "data": {}}
+    graph: dict[str, str | dict[str, object]] = {"type": "chart", "data": {}}
     if len(objective) != 2:
         return graph
 
     x_candidates = [0.0]
     y_candidates = [0.0]
-    for row, bound in zip(constraints, rhs):
+    for row, bound in zip(constraints, rhs, strict=True):
         a = row[0] if len(row) > 0 else 0
         b = row[1] if len(row) > 1 else 0
         if abs(a) > 1e-9 and bound / a >= 0:
@@ -769,7 +741,7 @@ def _build_feasible_graph(
     for x in range(max_grid_x + 1):
         for y in range(max_grid_y + 1):
             feasible = True
-            for row, sign, bound in zip(constraints, signs, rhs):
+            for row, sign, bound in zip(constraints, signs, rhs, strict=True):
                 a = row[0] if len(row) > 0 else 0
                 b = row[1] if len(row) > 1 else 0
                 if not _satisfies(a * x + b * y, sign, bound):

@@ -1,5 +1,5 @@
-import pulp
 import numpy as np
+import pulp
 
 
 def _fmt_num(x):
@@ -123,7 +123,7 @@ def solve_dual(objective, constraints, signs, rhs, optimization):
                 "dual_optimal_value": dual_val,
                 "primal_optimal_value": primal_val,
                 "duality_gap": abs(primal_val - (dual_val or 0))
-                if dual_val is not None
+                if primal_val is not None and dual_val is not None
                 else None,
             },
         }

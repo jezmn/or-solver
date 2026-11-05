@@ -1,29 +1,72 @@
+import os
+import time
 from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
+
 from backend.models import (
-    SimplexInput,
-    DualInput,
-    TransportInput,
     AssignmentInput,
-    IntegerProgrammingInput,
+    DualInput,
     GoalProgrammingInput,
+    IntegerProgrammingInput,
     SensitivityInput,
+    SimplexInput,
+    TransportInput,
 )
-from backend.solvers.simplex import solve_simplex
-from backend.solvers.dual import solve_dual
-from backend.solvers.vogel import solve_vogel
-from backend.solvers.northwest_corner import solve_northwest_corner
 from backend.solvers.assignment import solve_assignment
-from backend.solvers.integer_programming import solve_integer_programming
+from backend.solvers.dual import solve_dual
 from backend.solvers.goal_programming import solve_goal_programming
+from backend.solvers.integer_programming import solve_integer_programming
+from backend.solvers.northwest_corner import solve_northwest_corner
 from backend.solvers.sensitivity import solve_sensitivity
+from backend.solvers.simplex import solve_simplex
+from backend.solvers.vogel import solve_vogel
 
 app = FastAPI(title="Operations Research API", version="1.0.0")
+
+RATE_LIMIT_MAX = int(os.environ.get("RATE_LIMIT_MAX", "30"))
+RATE_WINDOW = 60  # seconds
+
+
+class SolverRateLimitMiddleware(BaseHTTPMiddleware):
+    """Fixed-window per-IP limits on POST /api/* (the CPU-heavy solver calls).
+
+    shortcut: in-memory and trusts cf-connecting-ip / x-forwarded-for, so a
+    restart resets counters and a direct caller could spoof its IP. Enough while
+    traffic goes through the Cloudflare tunnel with a single worker; move to
+    Cloudflare rate-limiting rules if the app scales past that.
+    """
+
+    def __init__(self, app):
+        super().__init__(app)
+        self._hits: dict[str, list[float]] = {}
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "POST" and request.url.path.startswith("/api/"):
+            forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+            ip = (
+                request.headers.get("cf-connecting-ip")
+                or forwarded
+                or (request.client.host if request.client else "?")
+            )
+            now = time.monotonic()
+            window = [t for t in self._hits.setdefault(ip, []) if now - t < RATE_WINDOW]
+            if len(window) >= RATE_LIMIT_MAX:
+                return Response("Too many requests", status_code=429)
+            window.append(now)
+            self._hits[ip] = window
+            if len(self._hits) > 10_000:
+                self._hits = {
+                    k: v
+                    for k, v in self._hits.items()
+                    if v and now - max(v) < RATE_WINDOW
+                }
+        return await call_next(request)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -33,6 +76,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
+            # shortcut: 'unsafe-eval' is required by the stock Alpine CDN build,
+            # review only if the frontend moves to Alpine's CSP build or drops it
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.plot.ly; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com; "
@@ -45,19 +90,27 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-ALLOWED_ORIGINS = [
-    "https://or-solver.arnebin.dev",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-]
+IS_PROD = os.environ.get("ENVIRONMENT", "development") == "production"
+
+# no cookies or sessions exist, so credentials (and their preflight constraints)
+# are never needed; drop localhost origins when actually deployed
+if IS_PROD:
+    ALLOWED_ORIGINS = ["https://or-solver.arnebin.dev"]
+else:
+    ALLOWED_ORIGINS = [
+        "https://or-solver.arnebin.dev",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(SolverRateLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
 
@@ -163,7 +216,7 @@ def serve_frontend(path: str):
     try:
         file_path.relative_to(FRONTEND_DIR.resolve())
     except ValueError:
-        raise HTTPException(status_code=404, detail="Not found")
+        raise HTTPException(status_code=404, detail="Not found") from None
     if file_path.is_file():
         return FileResponse(file_path)
     index = FRONTEND_DIR / "index.html"

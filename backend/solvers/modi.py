@@ -1,4 +1,3 @@
-import copy
 
 
 def _fmt_num(x):
@@ -161,6 +160,30 @@ def _count_occupied(allocation, m, n):
     return sum(1 for i in range(m) for j in range(n) if allocation[i][j] > 0)
 
 
+def _modi_step(
+    desc, iteration, u, v, d, alloc, entering, min_d, costs, supply, demand, is_optimal=False, **overrides
+):
+    data = {
+        "_step_type": "modi_iteration",
+        "iteration": iteration + 1,
+        "u_values": u,
+        "v_values": v,
+        "opportunity_costs": [row[:] for row in d],
+        "allocation_before": [row[:] for row in alloc],
+        "is_optimal": is_optimal,
+        "entering_cell": list(entering) if entering else None,
+        "entering_opportunity_cost": min_d if not is_optimal else None,
+        "loop_path": None,
+        "theta": None,
+        "allocation_after": None,
+        "costs": [row[:] for row in costs],
+        "supply": list(supply),
+        "demand": list(demand),
+    }
+    data.update(overrides)
+    return {"description": desc, "data": data}
+
+
 def solve_modi(allocation, costs, supply, demand, prior_steps):
     m = len(supply)
     n = len(demand)
@@ -191,36 +214,44 @@ def solve_modi(allocation, costs, supply, demand, prior_steps):
 
         entering, min_d = _find_entering(d, alloc, m, n)
 
-        is_optimal = entering is None or min_d >= -1e-10
-
-        def _make_step(desc, **overrides):
-            data = {
-                "_step_type": "modi_iteration",
-                "iteration": iteration + 1,
-                "u_values": u,
-                "v_values": v,
-                "opportunity_costs": [row[:] for row in d],
-                "allocation_before": [row[:] for row in alloc],
-                "is_optimal": is_optimal,
-                "entering_cell": list(entering) if entering else None,
-                "entering_opportunity_cost": min_d if not is_optimal else None,
-                "loop_path": None,
-                "theta": None,
-                "allocation_after": None,
-                "costs": [row[:] for row in costs],
-                "supply": list(supply),
-                "demand": list(demand),
-            }
-            data.update(overrides)
-            return {"description": desc, "data": data}
-
-        if is_optimal or not non_degenerate:
-            desc = (
-                f"MODI iteration {iteration + 1}: Optimal. All opportunity costs >= 0."
-                if is_optimal
-                else f"MODI iteration {iteration + 1}: Degenerate — stopping."
+        # entering is None <=> min_d = +inf
+        if entering is None or min_d >= -1e-10:
+            steps.append(
+                _modi_step(
+                    f"MODI iteration {iteration + 1}: Optimal. All opportunity costs >= 0.",
+                    iteration,
+                    u,
+                    v,
+                    d,
+                    alloc,
+                    entering,
+                    min_d,
+                    costs,
+                    supply,
+                    demand,
+                    is_optimal=True,
+                    allocation_after=[row[:] for row in alloc],
+                )
             )
-            steps.append(_make_step(desc, allocation_after=[row[:] for row in alloc]))
+            break
+
+        if not non_degenerate:
+            steps.append(
+                _modi_step(
+                    f"MODI iteration {iteration + 1}: Degenerate — stopping.",
+                    iteration,
+                    u,
+                    v,
+                    d,
+                    alloc,
+                    entering,
+                    min_d,
+                    costs,
+                    supply,
+                    demand,
+                    allocation_after=[row[:] for row in alloc],
+                )
+            )
             break
 
         ei, ej = entering
@@ -228,10 +259,20 @@ def solve_modi(allocation, costs, supply, demand, prior_steps):
 
         if len(loop) < 4:
             steps.append(
-                _make_step(
+                _modi_step(
                     f"MODI iteration {iteration + 1}: Cannot form loop — treating as optimal.",
-                    allocation_after=[row[:] for row in alloc],
+                    iteration,
+                    u,
+                    v,
+                    d,
+                    alloc,
+                    entering,
+                    min_d,
+                    costs,
+                    supply,
+                    demand,
                     is_optimal=True,
+                    allocation_after=[row[:] for row in alloc],
                     entering_cell=None,
                     entering_opportunity_cost=None,
                 )
@@ -241,9 +282,19 @@ def solve_modi(allocation, costs, supply, demand, prior_steps):
         new_alloc, theta = _reallocate(alloc, loop, m, n)
 
         steps.append(
-            _make_step(
+            _modi_step(
                 f"MODI iteration {iteration + 1}: Enter (row {ei}, col {ej}) "
                 f"d={_fmt_num(min_d)}  theta={_fmt_num(theta)}",
+                iteration,
+                u,
+                v,
+                d,
+                alloc,
+                entering,
+                min_d,
+                costs,
+                supply,
+                demand,
                 loop_path=loop,
                 theta=theta,
                 allocation_after=[row[:] for row in new_alloc],

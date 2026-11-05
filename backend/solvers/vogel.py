@@ -1,4 +1,4 @@
-import copy
+
 from backend.solvers.modi import solve_modi
 
 
@@ -15,7 +15,6 @@ def _balance(supply, demand, costs):
     if total_supply == total_demand:
         return list(supply), list(demand), [row[:] for row in costs]
 
-    n = len(supply)
     m = len(demand)
     new_costs = [row[:] for row in costs]
 
@@ -93,6 +92,13 @@ def solve_vogel(supply, demand, costs, optimization="min"):
 
         if max_row_pen >= max_col_pen:
             row_idx = row_penalties.index(max_row_pen)
+            # a penalty of -1 marks a row with no supply left (or negative costs);
+            # allocating from it would assign 0 forever and spin the loop
+            if supply_left[row_idx] <= 0:
+                supply_rows = [i for i in range(n) if supply_left[i] > 0]
+                if not supply_rows:
+                    break
+                row_idx = min(supply_rows, key=lambda i: row_penalties[i])
             valid_cols = [
                 j
                 for j in range(m)
@@ -103,6 +109,11 @@ def solve_vogel(supply, demand, costs, optimization="min"):
             col_idx = min(valid_cols, key=lambda j: costs[row_idx][j])
         else:
             col_idx = col_penalties.index(max_col_pen)
+            if demand_left[col_idx] <= 0:
+                demand_cols = [j for j in range(m) if demand_left[j] > 0]
+                if not demand_cols:
+                    break
+                col_idx = min(demand_cols, key=lambda j: col_penalties[j])
             valid_rows = [
                 i
                 for i in range(n)

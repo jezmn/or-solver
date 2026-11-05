@@ -1,7 +1,8 @@
 import logging
-import pulp
 import math
+
 import numpy as np
+import pulp
 
 
 def _fmt(v, decimals=2):
@@ -157,40 +158,40 @@ def solve_simplex(objective, constraints, signs, rhs, optimization):
     steps = []
     slack_count = sum(1 for s in signs if s in ("<=", ">="))
 
+    simplex_dir = 1 if optimization == "max" else -1
+    obj_row = [-simplex_dir * c for c in objective] + [0] * slack_count + [0]
+    tableau = []
+    slack_idx = 0
+    basis = []
+    for i in range(m):
+        row = list(constraints[i])
+        row += [0] * slack_count
+        slack_col = n + slack_idx
+        if signs[i] == "<=":
+            row[slack_col] = 1
+            basis.append(slack_col)
+            slack_idx += 1
+        elif signs[i] == ">=":
+            row[slack_col] = -1
+            basis.append(slack_col)
+            slack_idx += 1
+        else:
+            basis.append(-1)
+        row.append(rhs[i])
+        tableau.append(row)
+
+    tableau.insert(0, obj_row)
+
+    def _label(b):
+        if b < n:
+            return f"x{b + 1}"
+        elif b >= n:
+            return f"s{b - n + 1}"
+        return "art"
+
+    row_labels = [_label(b) for b in basis]
+
     try:
-        simplex_dir = 1 if optimization == "max" else -1
-        obj_row = [-simplex_dir * c for c in objective] + [0] * slack_count + [0]
-        tableau = []
-        slack_idx = 0
-        basis = []
-        for i in range(m):
-            row = list(constraints[i])
-            row += [0] * slack_count
-            slack_col = n + slack_idx
-            if signs[i] == "<=":
-                row[slack_col] = 1
-                basis.append(slack_col)
-                slack_idx += 1
-            elif signs[i] == ">=":
-                row[slack_col] = -1
-                basis.append(slack_col)
-                slack_idx += 1
-            else:
-                basis.append(-1)
-            row.append(rhs[i])
-            tableau.append(row)
-
-        tableau.insert(0, obj_row)
-
-        def _label(b):
-            if b < n:
-                return f"x{b + 1}"
-            elif b >= n:
-                return f"s{b - n + 1}"
-            return "art"
-
-        row_labels = [_label(b) for b in basis]
-
         max_iter = 50
         for iteration in range(max_iter):
             z_row = tableau[0]

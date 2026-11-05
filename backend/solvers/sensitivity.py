@@ -50,7 +50,7 @@ def solve_sensitivity(objective, constraints, signs, rhs, optimization):
 
     # Shadow prices (dual values) from constraints
     shadow_prices = []
-    for i, (name, constraint) in enumerate(prob.constraints.items()):
+    for i, (_, constraint) in enumerate(prob.constraints.items()):
         shadow_prices.append(
             {
                 "constraint": i,
@@ -61,7 +61,7 @@ def solve_sensitivity(objective, constraints, signs, rhs, optimization):
 
     # Reduced costs from variables
     reduced_costs = []
-    for i, var in enumerate(prob.variables()):
+    for var in prob.variables():
         reduced_costs.append(
             {"variable": var.name, "value": var.dj if var.dj is not None else 0}
         )
@@ -70,7 +70,7 @@ def solve_sensitivity(objective, constraints, signs, rhs, optimization):
     rhs_lower = []
     rhs_upper = []
     for i in range(m):
-        for direction, label in [(1, "increase"), (-1, "decrease")]:
+        for direction, _ in [(1, "increase"), (-1, "decrease")]:
             test_rhs = list(rhs)
             test_rhs[i] += direction * EPSILON
             test_prob = pulp.LpProblem(
@@ -109,7 +109,7 @@ def solve_sensitivity(objective, constraints, signs, rhs, optimization):
     obj_lower = []
     obj_upper = []
     for j in range(n):
-        for direction, label in [(1, "increase"), (-1, "decrease")]:
+        for direction, _ in [(1, "increase"), (-1, "decrease")]:
             test_obj = list(objective)
             test_obj[j] += direction * EPSILON
             test_prob = pulp.LpProblem(

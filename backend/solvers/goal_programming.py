@@ -94,16 +94,6 @@ def solve_goal_programming(objectives, constraints, signs, rhs):
             }
         )
 
-        active_goals = [
-            {
-                "goal": g_idx,
-                "type": typ,
-                "weight": w,
-                "value": pulp.value(dp[g_idx] if typ == "plus" else dm[g_idx]) or 0,
-            }
-            for p, w, typ, g_idx in prt
-        ]
-
         dev_terms = []
         for _, w, typ, g_idx in prt:
             sign = "d⁺" if typ == "plus" else "d⁻"

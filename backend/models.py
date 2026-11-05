@@ -1,6 +1,6 @@
-from pydantic import BaseModel, field_validator, model_validator
 import math
 
+from pydantic import BaseModel, field_validator, model_validator
 
 VALID_SIGNS = {"<=", ">=", "="}
 VALID_OPTIMIZATION = {"max", "min"}
@@ -15,11 +15,11 @@ def _check_finite(v):
     return v
 
 
-def _check_finite_list(l):
-    for item in l:
+def _check_finite_list(items):
+    for item in items:
         if isinstance(item, (int, float)):
             _check_finite(float(item))
-    return l
+    return items
 
 
 class SimplexInput(BaseModel):
@@ -96,6 +96,10 @@ class SimplexInput(BaseModel):
 
 
 class DualInput(SimplexInput):
+    pass
+
+
+class SensitivityInput(SimplexInput):
     pass
 
 
@@ -200,63 +204,8 @@ class AssignmentInput(BaseModel):
         return self
 
 
-class IntegerProgrammingInput(BaseModel):
-    objective: list[float]
-    constraints: list[list[float]]
-    signs: list[str]
-    rhs: list[float]
+class IntegerProgrammingInput(SimplexInput):
     integer_vars: list[int]
-    optimization: str = "max"
-
-    @field_validator("objective")
-    @classmethod
-    def objective_not_empty(cls, v):
-        if len(v) == 0:
-            raise ValueError("objective must not be empty")
-        if len(v) > MAX_VARS:
-            raise ValueError(f"objective length {len(v)} exceeds max {MAX_VARS}")
-        _check_finite_list(v)
-        return v
-
-    @field_validator("constraints")
-    @classmethod
-    def constraints_not_empty(cls, v):
-        if len(v) == 0:
-            raise ValueError("constraints must not be empty")
-        if len(v) > MAX_CONSTRAINTS:
-            raise ValueError(f"constraints rows {len(v)} exceeds max {MAX_CONSTRAINTS}")
-        for row in v:
-            if len(row) == 0:
-                raise ValueError("each constraint row must not be empty")
-            if len(row) > MAX_VARS:
-                raise ValueError(
-                    f"constraint row length {len(row)} exceeds max {MAX_VARS}"
-                )
-            _check_finite_list(row)
-        return v
-
-    @field_validator("signs")
-    @classmethod
-    def signs_valid(cls, v):
-        if any(s not in VALID_SIGNS for s in v):
-            invalid = [s for s in v if s not in VALID_SIGNS]
-            raise ValueError(
-                f"invalid sign(s): {invalid}. Must be one of {VALID_SIGNS}"
-            )
-        return v
-
-    @field_validator("rhs")
-    @classmethod
-    def rhs_finite(cls, v):
-        _check_finite_list(v)
-        return v
-
-    @field_validator("optimization")
-    @classmethod
-    def optimization_valid(cls, v):
-        if v not in VALID_OPTIMIZATION:
-            raise ValueError(f"optimization must be one of {VALID_OPTIMIZATION}")
-        return v
 
     @field_validator("integer_vars")
     @classmethod
@@ -266,18 +215,8 @@ class IntegerProgrammingInput(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_all(self):
+    def integer_vars_in_range(self):
         n = len(self.objective)
-        m = len(self.constraints)
-        for i, row in enumerate(self.constraints):
-            if len(row) != n:
-                raise ValueError(
-                    f"constraint row {i} length {len(row)} != objective length {n}"
-                )
-        if len(self.signs) != m:
-            raise ValueError(f"signs length {len(self.signs)} != constraints rows {m}")
-        if len(self.rhs) != m:
-            raise ValueError(f"rhs length {len(self.rhs)} != constraints rows {m}")
         for iv in self.integer_vars:
             if not (0 <= iv < n):
                 raise ValueError(f"integer_var {iv} out of range [0, {n})")
@@ -367,77 +306,4 @@ class GoalProgrammingInput(BaseModel):
             self.rhs
         ):
             raise ValueError("constraints, signs, and rhs must have same length")
-        return self
-
-
-class SensitivityInput(BaseModel):
-    objective: list[float]
-    constraints: list[list[float]]
-    signs: list[str]
-    rhs: list[float]
-    optimization: str = "max"
-
-    @field_validator("objective")
-    @classmethod
-    def objective_not_empty(cls, v):
-        if len(v) == 0:
-            raise ValueError("objective must not be empty")
-        if len(v) > MAX_VARS:
-            raise ValueError(f"objective length {len(v)} exceeds max {MAX_VARS}")
-        _check_finite_list(v)
-        return v
-
-    @field_validator("constraints")
-    @classmethod
-    def constraints_not_empty(cls, v):
-        if len(v) == 0:
-            raise ValueError("constraints must not be empty")
-        if len(v) > MAX_CONSTRAINTS:
-            raise ValueError(f"constraints rows {len(v)} exceeds max {MAX_CONSTRAINTS}")
-        for row in v:
-            if len(row) == 0:
-                raise ValueError("each constraint row must not be empty")
-            if len(row) > MAX_VARS:
-                raise ValueError(
-                    f"constraint row length {len(row)} exceeds max {MAX_VARS}"
-                )
-            _check_finite_list(row)
-        return v
-
-    @field_validator("signs")
-    @classmethod
-    def signs_valid(cls, v):
-        if any(s not in VALID_SIGNS for s in v):
-            invalid = [s for s in v if s not in VALID_SIGNS]
-            raise ValueError(
-                f"invalid sign(s): {invalid}. Must be one of {VALID_SIGNS}"
-            )
-        return v
-
-    @field_validator("rhs")
-    @classmethod
-    def rhs_finite(cls, v):
-        _check_finite_list(v)
-        return v
-
-    @field_validator("optimization")
-    @classmethod
-    def optimization_valid(cls, v):
-        if v not in VALID_OPTIMIZATION:
-            raise ValueError(f"optimization must be one of {VALID_OPTIMIZATION}")
-        return v
-
-    @model_validator(mode="after")
-    def dimensions_match(self):
-        n = len(self.objective)
-        m = len(self.constraints)
-        for i, row in enumerate(self.constraints):
-            if len(row) != n:
-                raise ValueError(
-                    f"constraint row {i} length {len(row)} != objective length {n}"
-                )
-        if len(self.signs) != m:
-            raise ValueError(f"signs length {len(self.signs)} != constraints rows {m}")
-        if len(self.rhs) != m:
-            raise ValueError(f"rhs length {len(self.rhs)} != constraints rows {m}")
         return self
