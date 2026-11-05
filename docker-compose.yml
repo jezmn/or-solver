@@ -1,6 +1,8 @@
 services:
   app:
     build: .
+    environment:
+      - ENVIRONMENT=production
     restart: unless-stopped
 
   tunnel:

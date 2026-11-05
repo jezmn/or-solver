@@ -1,8 +1,8 @@
 FROM node:24-slim AS css-builder
 WORKDIR /app
-COPY package.json package-lock.json tailwind.config.js input.css ./
+COPY package.json pnpm-lock.yaml tailwind.config.js input.css ./
 COPY frontend ./frontend
-RUN npm ci && npm run css
+RUN corepack enable pnpm && pnpm install --frozen-lockfile && pnpm run css
 
 FROM python:3.12-slim
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
