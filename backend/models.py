@@ -7,18 +7,21 @@ VALID_OPTIMIZATION = {"max", "min"}
 MAX_VARS = 100
 MAX_CONSTRAINTS = 100
 MAX_MATRIX_DIM = 100
+MAX_ABS_VALUE = 1e12
 
 
 def _check_finite(v):
     if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
         raise ValueError("Value must be finite")
+    if isinstance(v, (int, float)) and abs(v) > MAX_ABS_VALUE:
+        raise ValueError(f"Value magnitude exceeds max {MAX_ABS_VALUE}")
     return v
 
 
 def _check_finite_list(items):
     for item in items:
         if isinstance(item, (int, float)):
-            _check_finite(float(item))
+            _check_finite(item)
     return items
 
 
@@ -246,6 +249,11 @@ class GoalObjective(BaseModel):
     def target_finite(cls, v):
         _check_finite(v)
         return v
+
+    @field_validator("wt_plus", "wt_minus")
+    @classmethod
+    def weights_finite(cls, v):
+        return _check_finite(v)
 
     @field_validator("prty_plus", "prty_minus")
     @classmethod
