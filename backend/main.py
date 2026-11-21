@@ -1,3 +1,4 @@
+import asyncio
 import os
 import time
 from pathlib import Path
@@ -31,6 +32,24 @@ app = FastAPI(title="Operations Research API", version="1.0.0")
 
 RATE_LIMIT_MAX = int(os.environ.get("RATE_LIMIT_MAX", "30"))
 RATE_WINDOW = 60  # seconds
+MAX_BODY_BYTES = int(os.environ.get("MAX_BODY_BYTES", "1000000"))
+MAX_CONCURRENT_SOLVES = int(os.environ.get("MAX_CONCURRENT_SOLVES", "4"))
+SOLVE_QUEUE_TIMEOUT = float(os.environ.get("SOLVE_QUEUE_TIMEOUT", "10"))
+
+
+class BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    """Reject oversized request bodies before FastAPI parses them.
+
+    shortcut: content-length only; chunked bodies bypass it, but the public
+    entrypoint is behind Cloudflare which caps body size. Revisit if the origin
+    is ever exposed directly.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        length = request.headers.get("content-length")
+        if length and length.isdigit() and int(length) > MAX_BODY_BYTES:
+            return Response("Payload too large", status_code=413)
+        return await call_next(request)
 
 
 class SolverRateLimitMiddleware(BaseHTTPMiddleware):
@@ -45,6 +64,7 @@ class SolverRateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
         self._hits: dict[str, list[float]] = {}
+        self._slots = asyncio.Semaphore(MAX_CONCURRENT_SOLVES)
 
     async def dispatch(self, request: Request, call_next):
         if request.method == "POST" and request.url.path.startswith("/api/"):
@@ -61,11 +81,21 @@ class SolverRateLimitMiddleware(BaseHTTPMiddleware):
             window.append(now)
             self._hits[ip] = window
             if len(self._hits) > 10_000:
-                self._hits = {
-                    k: v
-                    for k, v in self._hits.items()
-                    if v and now - max(v) < RATE_WINDOW
-                }
+                # clearing bounds memory when spoofed IPs keep every entry fresh
+                self._hits = {}
+            # cap simultaneous CBC processes: the per-IP limit is spoofable,
+            # so this is the bound that actually protects the server. A request
+            # that waits too long is dropped instead of queued forever.
+            try:
+                await asyncio.wait_for(
+                    self._slots.acquire(), timeout=SOLVE_QUEUE_TIMEOUT
+                )
+            except TimeoutError:
+                return Response("Solver busy", status_code=429)
+            try:
+                return await call_next(request)
+            finally:
+                self._slots.release()
         return await call_next(request)
 
 
@@ -112,6 +142,7 @@ app.add_middleware(
 )
 app.add_middleware(SolverRateLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(BodySizeLimitMiddleware)
 
 
 @app.get("/api/health")
