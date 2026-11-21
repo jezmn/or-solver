@@ -55,6 +55,23 @@ def test_model_rejects_non_finite():
         )
 
 
+def test_model_rejects_huge_finite_values():
+    with pytest.raises(ValidationError):
+        SimplexInput(
+            objective=[1e308, 1.0],
+            constraints=[[1.0, 1.0]],
+            signs=["<="],
+            rhs=[1.0],
+        )
+
+
+def test_body_size_limit(client):
+    r = client.post(
+        "/api/simplex", json={"objective": [1.0] * 1_000_000}
+    )
+    assert r.status_code == 413
+
+
 def test_model_rejects_dimension_mismatch():
     with pytest.raises(ValidationError):
         SimplexInput(
@@ -204,3 +221,31 @@ def test_rate_limiter_blocks_after_limit(monkeypatch):
 def test_secret_paths_not_leaked(client):
     r = client.get("/api/nope")
     assert r.status_code == 404
+
+
+def test_solve_queue_timeout(monkeypatch):
+    import asyncio
+
+    import httpx
+    from fastapi import FastAPI
+
+    from backend import main as main_mod
+
+    monkeypatch.setattr(main_mod, "MAX_CONCURRENT_SOLVES", 1)
+    monkeypatch.setattr(main_mod, "SOLVE_QUEUE_TIMEOUT", 0.01)
+
+    app = FastAPI()
+    app.add_middleware(main_mod.SolverRateLimitMiddleware)
+
+    @app.post("/api/slow")
+    async def slow():
+        await asyncio.sleep(0.1)
+        return {"ok": True}
+
+    async def run():
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+            return await asyncio.gather(c.post("/api/slow"), c.post("/api/slow"))
+
+    codes = sorted(r.status_code for r in asyncio.run(run()))
+    assert codes == [200, 429]
